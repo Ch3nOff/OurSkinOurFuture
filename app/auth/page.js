@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Sparkles } from "lucide-react";
 import AuthForm from "./AuthForm";
 
@@ -22,7 +23,9 @@ export default function AuthPage() {
           Sign in to save each scan and get automatic comparisons against your history.
         </p>
 
-        <AuthForm />
+        <Suspense fallback={null}>
+          <AuthForm />
+        </Suspense>
 
         <Link
           href="/dashboard"

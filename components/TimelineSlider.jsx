@@ -4,58 +4,92 @@ import { useState, useEffect } from "react";
 import { TrendingUp } from "lucide-react";
 import { mockSimulation, topConcerns, overallScore } from "@/lib/skinAnalysis";
 
-export default function TimelineSlider({ baselineConcerns, totalWeeks = 12 }) {
+export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 12 }) {
   const [week, setWeek] = useState(0);
   const [simulated, setSimulated] = useState(() =>
     mockSimulation(baselineConcerns, 0, totalWeeks)
   );
+  const [projectedImage, setProjectedImage] = useState(null);
+  const [imgLoading, setImgLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setWeek(0);
-    async function load() {
+    setProjectedImage(null);
+    async function load(weekIndex) {
       try {
         const res = await fetch("/api/simulate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ baselineConcerns, weekIndex: 0, totalWeeks }),
+          body: JSON.stringify({
+            image,
+            baselineConcerns,
+            weekIndex,
+            totalWeeks,
+          }),
         });
         if (!res.ok) throw new Error("simulate failed");
         const data = await res.json();
-        if (!cancelled && data.projectedScores) setSimulated(data.projectedScores);
+        if (cancelled) return;
+        if (data.projectedScores) setSimulated(data.projectedScores);
+        if (data.projectedImages?.length) {
+          setImgLoading(true);
+          setProjectedImage(data.projectedImages[0]);
+        } else {
+          setProjectedImage(null);
+        }
       } catch {
-        // Fall back to the local mock so the slider always renders.
-        if (!cancelled) setSimulated(mockSimulation(baselineConcerns, 0, totalWeeks));
+        if (cancelled) return;
+        setSimulated(mockSimulation(baselineConcerns, weekIndex, totalWeeks));
+        setProjectedImage(null);
+      } finally {
+        if (!cancelled) setImgLoading(false);
       }
     }
-    load();
+    load(0);
     return () => {
       cancelled = true;
     };
-  }, [baselineConcerns, totalWeeks]);
+  }, [image, baselineConcerns, totalWeeks]);
 
   useEffect(() => {
+    if (week === 0) return;
     let cancelled = false;
     async function loadWeek() {
       try {
         const res = await fetch("/api/simulate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ baselineConcerns, weekIndex: week, totalWeeks }),
+          body: JSON.stringify({
+            image,
+            baselineConcerns,
+            weekIndex: week,
+            totalWeeks,
+          }),
         });
         if (!res.ok) throw new Error("simulate failed");
         const data = await res.json();
-        if (!cancelled && data.projectedScores) setSimulated(data.projectedScores);
+        if (cancelled) return;
+        if (data.projectedScores) setSimulated(data.projectedScores);
+        if (data.projectedImages?.length) {
+          setImgLoading(true);
+          setProjectedImage(data.projectedImages[0]);
+        } else {
+          setProjectedImage(null);
+        }
       } catch {
-        if (!cancelled) setSimulated(mockSimulation(baselineConcerns, week, totalWeeks));
+        if (cancelled) return;
+        setSimulated(mockSimulation(baselineConcerns, week, totalWeeks));
+        setProjectedImage(null);
+      } finally {
+        if (!cancelled) setImgLoading(false);
       }
     }
-    if (week === 0) return;
     loadWeek();
     return () => {
       cancelled = true;
     };
-  }, [week, baselineConcerns, totalWeeks]);
+  }, [week, image, baselineConcerns, totalWeeks]);
 
   const overallBaseline = overallScore(baselineConcerns);
   const overallNow = overallScore(simulated);
@@ -73,6 +107,24 @@ export default function TimelineSlider({ baselineConcerns, totalWeeks = 12 }) {
         </div>
         <TrendingUp size={20} className={improvementPct > 0 ? "text-sage" : "text-muted"} />
       </div>
+
+      {projectedImage ? (
+        <div className="mb-4 rounded-2xl overflow-hidden border border-border bg-paper">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={projectedImage}
+            alt={`Projected skin at week ${week}`}
+            className="w-full h-56 object-cover"
+          />
+          {imgLoading && (
+            <div className="text-[11px] text-center text-faint py-1">Rendering projection…</div>
+          )}
+        </div>
+      ) : (
+        <div className="mb-4 rounded-2xl h-32 flex items-center justify-center bg-paper border border-border text-[11px] text-faint">
+          {imgLoading ? "Rendering projection…" : "Projected image will appear here"}
+        </div>
+      )}
 
       <input
         type="range"
@@ -107,8 +159,8 @@ export default function TimelineSlider({ baselineConcerns, totalWeeks = 12 }) {
       </div>
 
       <p className="text-[11px] mt-4 leading-relaxed text-muted">
-        Simulated using a typical improvement curve for the recommended ingredients. Actual results vary by
-        consistency of use and individual skin condition.
+        Simulated using YouCam's AI Skin Simulation — the projection image shows how consistent care could
+        look by week {week}. Actual results vary by consistency of use and individual skin condition.
       </p>
     </div>
   );

@@ -28,6 +28,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results | routine
   const [imagePreview, setImagePreview] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [analysisError, setAnalysisError] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
   const [recSource, setRecSource] = useState(null);
   const [recLoading, setRecLoading] = useState(false);
@@ -63,6 +64,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
   async function runAnalysis(dataUrl, seed) {
     setImagePreview(dataUrl);
+    setAnalysisError(null);
     setStage("analyzing");
 
     try {
@@ -72,6 +74,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         body: JSON.stringify({ image: dataUrl, seed }),
       });
       const result = await analyzeRes.json();
+      if (!analyzeRes.ok || result.error) {
+        throw new Error(result.error || "Analysis failed");
+      }
       setAnalysis(result);
       setStage("results");
 
@@ -86,6 +91,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setRecSource(recData.source ?? null);
     } catch (err) {
       console.error("Analysis flow failed:", err);
+      setAnalysisError(err.message || "Analysis failed. Please try again.");
+      setStage("capture");
     } finally {
       setRecLoading(false);
     }
@@ -304,6 +311,12 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
         {stage === "capture" && (
           <div className="mt-6">
+            {analysisError && (
+              <div className="flex items-start gap-2 mb-4 rounded-2xl p-3 bg-clay/10 border border-clay/40 text-clay">
+                <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                <p className="text-xs leading-relaxed">{analysisError}</p>
+              </div>
+            )}
             <h1 className="text-3xl font-bold leading-tight mb-2 text-ink">
               Understand your skin.
               <br />
@@ -439,7 +452,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Treatment Simulation</div>
-              <TimelineSlider baselineConcerns={analysis.concerns} totalWeeks={12} />
+              <TimelineSlider image={imagePreview} baselineConcerns={analysis.concerns} totalWeeks={12} />
             </section>
 
             <div className="mb-4">

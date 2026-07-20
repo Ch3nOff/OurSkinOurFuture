@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function AuthForm() {
   const router = useRouter();
-  const [mode, setMode] = useState("signin"); // signin | signup
+  const params = useSearchParams();
+  const initialMode = params.get("mode") === "signup" ? "signup" : "signin";
+  const [mode, setMode] = useState(initialMode); // signin | signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [confirmSent, setConfirmSent] = useState(false);
@@ -23,6 +26,11 @@ export default function AuthForm() {
 
     try {
       if (mode === "signup") {
+        if (password !== confirm) {
+          setError("Passwords don't match. Please retype to confirm.");
+          setLoading(false);
+          return;
+        }
         const { error: signUpError } = await supabase.auth.signUp({ email, password });
         if (signUpError) throw signUpError;
         setConfirmSent(true);
@@ -90,9 +98,26 @@ export default function AuthForm() {
         minLength={6}
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="w-full rounded-xl px-3.5 py-2.5 mb-5 text-sm bg-paper border border-border text-ink outline-none focus:border-sage transition-colors"
+        className="w-full rounded-xl px-3.5 py-2.5 mb-4 text-sm bg-paper border border-border text-ink outline-none focus:border-sage transition-colors"
         placeholder="At least 6 characters"
       />
+
+      {mode === "signup" && (
+        <>
+          <label className="block text-[11px] font-mono uppercase tracking-widest mb-1.5 text-muted">
+            Confirm Password
+          </label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            className="w-full rounded-xl px-3.5 py-2.5 mb-5 text-sm bg-paper border border-border text-ink outline-none focus:border-sage transition-colors"
+            placeholder="Retype to avoid typos"
+          />
+        </>
+      )}
 
       {error && (
         <div className="flex items-start gap-2 mb-4 text-clay">

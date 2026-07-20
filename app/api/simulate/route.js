@@ -1,66 +1,58 @@
 import { NextResponse } from "next/server";
 import { mockSimulation } from "@/lib/skinAnalysis";
+import { simulateWithYouCam } from "@/lib/youcam";
 
 /**
  * POST /api/simulate
  *
- * MOCK IMPLEMENTATION. Body: { baselineConcerns, weekIndex, totalWeeks }.
- * Returns the projected per-concern scores at the requested week, exactly
- * like the client-side mockSimulation() the TimelineSlider calls today.
+ * Body: { image, baselineConcerns, weekIndex, totalWeeks }
  *
- * Real integration point (see ROADMAP.md Milestones M1–M3):
- *   1. Accept the baseline image + target concerns (multipart/form-data or
- *      base64 + concerns JSON), not just numeric concerns.
- *   2. Forward to YouCam's AI Skin Simulation API using YOUCAM_API_KEY,
- *      which must only ever be read here, server-side — never exposed to
- *      the client. The real API returns actual before/after IMAGES, not
- *      interpolated numbers, so the response mapping below (projected
- *      scores + projected image urls) is intentionally shaped to let the
- *      timeline UI upgrade from a number curve to a real visual scrub.
- *   3. Map YouCam's real response fields onto { projectedScores,
- *      projectedImages } so the TimelineSlider can render real visuals
- *      without changing call sites elsewhere.
+ * When YOUCAM_API_KEY is set, the uploaded image is forwarded to the real
+ * YouCam AI Skin Simulation API (server-side only), which returns an actual
+ * before/after PROJECTION IMAGE. The simulation intensity scales with the
+ * requested week so dragging the timeline shows progressively improved skin.
  *
- * This route exists (rather than calling mockSimulation directly from the
- * client) specifically so the real swap is a same-file change, not an
- * architecture change — mirroring the /api/analyze pattern.
+ * Always uses the live API when the key is present (no silent demo). The
+ * local mock only runs without a key so the UI still renders in dev.
  */
 export async function POST(request) {
   try {
     const body = await request.json();
-    const {
-      baselineConcerns,
-      weekIndex = 0,
-      totalWeeks = 12,
-    } = body;
+    const { image, baselineConcerns, weekIndex = 0, totalWeeks = 12 } = body;
+    const apiKey = process.env.YOUCAM_API_KEY;
 
-    if (!baselineConcerns || typeof baselineConcerns !== "object") {
+    if (!apiKey) {
+      const simulated = mockSimulation(baselineConcerns, weekIndex, totalWeeks);
+      return NextResponse.json({ projectedScores: simulated, projectedImages: null, mock: true });
+    }
+
+    if (typeof image !== "string" || !image.startsWith("data:")) {
       return NextResponse.json(
-        { error: "Missing baselineConcerns data." },
+        { error: "A valid image (data URL) is required for simulation." },
         { status: 400 }
       );
     }
 
-    // Simulate realistic network latency so the timeline doesn't feel
-    // misleadingly instant compared to how the real API will feel.
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    // Intensity grows from 0 at week 0 to 1 at the final week.
+    const intensity = totalWeeks > 0 ? weekIndex / totalWeeks : 0;
+    const [meta, b64] = image.split(",");
+    const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
+    const buffer = Buffer.from(b64, "base64");
 
-    const projectedScores = mockSimulation(
-      baselineConcerns,
-      weekIndex,
-      totalWeeks
-    );
+    const { imageUrl } = await simulateWithYouCam(buffer, contentType, intensity);
+
+    const projectedScores = mockSimulation(baselineConcerns, weekIndex, totalWeeks);
 
     return NextResponse.json({
       projectedScores,
-      projectedImages: null, // populated once YouCam AI Skin Simulation is wired
-      mock: true,
+      projectedImages: imageUrl ? [imageUrl] : null,
+      mock: false,
     });
   } catch (err) {
-    console.error("Simulate route error:", err);
+    console.error("Simulate route error:", err.message);
     return NextResponse.json(
-      { error: "Simulation failed. Please try again." },
-      { status: 500 }
+      { error: err.message || "Simulation failed. Please try again." },
+      { status: err.status || 502 }
     );
   }
 }

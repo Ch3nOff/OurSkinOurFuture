@@ -51,7 +51,7 @@ Visit `http://localhost:3000`.
 
 ## 3. Get an Anthropic API key
 
-The `/api/recommend` route makes a real, live call to Claude to write the personal recommendation text.
+The `/api/recommend` route makes a real, live call to Qwen (Alibaba DashScope) to write the personal recommendation text.
 
 1. Create a key at [console.anthropic.com/settings/keys](https://console.anthropic.com/settings/keys).
 2. Set it as `ANTHROPIC_API_KEY` in `.env.local` (and later, in Vercel — see below). This key is only ever read server-side; it is never sent to the browser.
@@ -110,7 +110,7 @@ app/
   auth/                    → Supabase sign in / sign up
   dashboard/               → main app: capture, analyze, results, save, compare
   api/analyze/             → mocked skin analysis endpoint
-  api/recommend/           → live Claude call for personal recommendation
+  api/recommend/           → live Qwen (DashScope) call for personal recommendation
 components/                → shared UI: zone map, score ring, camera, comparison, etc.
 lib/skinAnalysis.js        → all domain logic — labels, ingredient map, mock data, comparison math
 lib/supabase/               → browser + server Supabase client setup
