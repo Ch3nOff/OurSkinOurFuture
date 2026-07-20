@@ -1,87 +1,59 @@
-# Active Context: Next.js Starter Template
+# Active Context: OurSkinOurFuture
 
 ## Current State
 
-**Template Status**: ✅ Ready for development
+**Status**: ✅ Prototype built — full upload → analyze → results flow working locally.
 
-The template is a clean Next.js 16 starter with TypeScript and Tailwind CSS 4. It's ready for AI-assisted expansion to build any type of application.
+This is the **OurSkinOurFuture** skin diagnostic built for the YouCam Skin AI hackathon (deadline Aug 17, 2026). The repo started as a blank Next.js 16 template and now implements the roadmap's "working today" feature set.
 
 ## Recently Completed
 
-- [x] Base Next.js 16 setup with App Router
-- [x] TypeScript configuration with strict mode
-- [x] Tailwind CSS 4 integration
-- [x] ESLint configuration
-- [x] Memory bank documentation
-- [x] Recipe system for common features
+- [x] Full upload → analyze → results UI flow (idle / analyzing / results states, no dead ends)
+- [x] `mockSkinAnalysis()` — per-concern severity 0–100 across 8 concerns in YouCam severity-scale shape; seeded per-image so different photos vary
+- [x] Facial zone map (forehead, cheeks, nose, chin, under-eye) with per-zone + per-concern scores — the product's differentiation
+- [x] Ingredient recommendation cards mapping top concerns → actives (Retinol, Niacinamide, Centella, etc.)
+- [x] Live LLM narrative at `/api/narrative` via Anthropic Claude (real call when `ANTHROPIC_API_KEY` set; templated fallback otherwise)
+- [x] Treatment timeline slider (week 0–12) with diminishing-returns projection curve + per-concern before/after
+- [x] Build/typecheck/lint all pass
+
+## Explicitly MOCKED (per roadmap, replace before submission)
+
+- `src/lib/mockAnalysis.ts` — stands in for YouCam Skin Analysis API (M2/M3: swap for `/api/analyze`)
+- `src/lib/mockSimulation.ts` — stands in for YouCam AI Skin Simulation API; outputs **numbers only**, real API outputs **images** (highest-leverage task)
 
 ## Current Structure
 
-| File/Directory | Purpose | Status |
-|----------------|---------|--------|
-| `src/app/page.tsx` | Home page | ✅ Ready |
-| `src/app/layout.tsx` | Root layout | ✅ Ready |
-| `src/app/globals.css` | Global styles | ✅ Ready |
-| `.kilocode/` | AI context & recipes | ✅ Ready |
+| File | Purpose |
+|------|---------|
+| `src/app/page.tsx` | Orchestrates the flow (client component) |
+| `src/app/api/narrative/route.ts` | Live Claude narrative, graceful fallback |
+| `src/components/UploadStep.tsx` | Drag/drop + file upload, validation |
+| `src/components/ZoneMap.tsx` | SVG face + per-zone hotspot scores |
+| `src/components/ConcernBars.tsx` | Per-concern severity bars |
+| `src/components/IngredientCards.tsx` | Active-ingredient recommendation cards |
+| `src/components/Narrative.tsx` | LLM narrative block |
+| `src/components/Timeline.tsx` | Week 0–12 projection slider |
+| `src/lib/types.ts` | Domain types + concern/zone labels |
+| `src/lib/mockAnalysis.ts` | MOCK YouCam Skin Analysis |
+| `src/lib/mockSimulation.ts` | MOCK YouCam AI Skin Simulation |
+| `src/lib/recommendations.ts` | Concern→ingredient logic |
 
-## Current Focus
+## Key Decisions
 
-The template is ready. Next steps depend on user requirements:
+- Replaced `next/font/google` Geist with a system font stack — Google Fonts fetch fails in the build sandbox; keeps build offline-clean.
+- Tailwind v4 CSS-first config (uses `globals.css` vars), dark theme.
 
-1. What type of application to build
-2. What features are needed
-3. Design/branding preferences
+## Next Milestones (from roadmap)
 
-## Quick Start Guide
-
-### To add a new page:
-
-Create a file at `src/app/[route]/page.tsx`:
-```tsx
-export default function NewPage() {
-  return <div>New page content</div>;
-}
-```
-
-### To add components:
-
-Create `src/components/` directory and add components:
-```tsx
-// src/components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
-  return <button className="px-4 py-2 bg-blue-600 text-white rounded">{children}</button>;
-}
-```
-
-### To add a database:
-
-Follow `.kilocode/recipes/add-database.md`
-
-### To add API routes:
-
-Create `src/app/api/[route]/route.ts`:
-```tsx
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  return NextResponse.json({ message: "Hello" });
-}
-```
-
-## Available Recipes
-
-| Recipe | File | Use Case |
-|--------|------|----------|
-| Add Database | `.kilocode/recipes/add-database.md` | Data persistence with Drizzle + SQLite |
-
-## Pending Improvements
-
-- [ ] Add more recipes (auth, email, etc.)
-- [ ] Add example components
-- [ ] Add testing setup recipe
+- **M1 (Aug 3–5)**: confirm YouCam redeem code, run both APIs via curl, capture real response shape
+- **M2 (Aug 5–8)**: backend proxy routes `/api/analyze` + `/api/simulate` holding the API key server-side
+- **M3 (Aug 8–11)**: swap mocks; rebuild timeline around real images
+- **M4 (Aug 11–15)**: polish, screenshots, submission text, demo video
+- **M5 (Aug 15–17)**: buffer + submit with 12h margin
 
 ## Session History
 
 | Date | Changes |
 |------|---------|
-| Initial | Template created with base setup |
+| Initial | Template created |
+| 2026-07-20 | Built full OurSkinOurFuture prototype (flow, zone map, recs, live narrative, timeline) |
