@@ -431,7 +431,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     {recommendation || "Your personalized note will appear here after analysis."}
                   </p>
                   {!recLoading && recommendation && recSource === "fallback" && (
-                    <p className="text-[10px] font-mono text-faint mt-2">demo note · set ANTHROPIC_API_KEY for a live Claude note</p>
+                    <p className="text-[10px] font-mono text-faint mt-2">demo note · set DASHSCOPE_API_KEY for a live Qwen note</p>
                   )}
                 </>
               )}

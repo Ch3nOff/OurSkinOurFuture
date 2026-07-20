@@ -13,7 +13,7 @@ See [`ROADMAP.md`](./ROADMAP.md) for the full project plan and current build sta
 | Camera capture, upload, full UI flow | Real, fully working |
 | Skin condition analysis (`/api/analyze`) | **Mocked** — see comments in `app/api/analyze/route.js` |
 | Treatment projection curve | **Mocked** — numbers only, not real before/after images |
-| Personal recommendation narrative (`/api/recommend`) | **Real** — live call to Claude, server-side |
+| Personal recommendation narrative (`/api/recommend`) | **Real** — live call to Qwen (DashScope), server-side |
 | Supabase auth (sign up / sign in) | Real, fully working |
 | Scan history + week-over-week comparison | Real, fully working — compares whatever scores are in the database, mocked or not |
 

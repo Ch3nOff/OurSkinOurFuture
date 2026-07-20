@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { CONCERN_LABELS, topConcerns } from "@/lib/skinAnalysis";
+import { callQwen } from "@/lib/qwen";
 
 /**
  * POST /api/qwen
@@ -25,7 +26,6 @@ export async function POST(request) {
       return NextResponse.json({ error: "Missing concerns data." }, { status: 400 });
     }
 
-    const apiKey = process.env.DASHSCOPE_API_KEY;
     const top = topConcerns(concerns, 4);
     const concernSummary = top
       .map((c) => `${c.label}: severity ${c.score}/100`)
@@ -70,54 +70,21 @@ One sentence: consistent routine + habits over 4-12 weeks, not instant results.
 
 Maximum 320 words total. No markdown tables. Plain text under the headings above.`;
 
-    if (!apiKey) {
-      return NextResponse.json({
-        plan:
-          fallbackPlan(concernSummary, routineText, prefsBlock),
-        source: "fallback",
-      });
-    }
-
-    const baseUrl =
-      process.env.DASHSCOPE_BASE_URL ||
-      "https://dashscope-us.aliyuncs.com/compatible-mode/v1";
-
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: process.env.DASHSCOPE_MODEL || "qwen-plus",
-        messages: [
-          {
-            role: "system",
-            content:
-              "You are a skincare and lifestyle coach. Output only the requested plan structure.",
-          },
-          { role: "user", content: prompt },
-        ],
-        max_tokens: 900,
-        temperature: 0.7,
-      }),
+    const text = await callQwen({
+      system:
+        "You are a skincare and lifestyle coach. Output only the requested plan structure.",
+      user: prompt,
+      maxTokens: 900,
+      temperature: 0.7,
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.error("Qwen API error:", res.status, errText);
-      return NextResponse.json({
-        plan: fallbackPlan(concernSummary, routineText, prefsBlock),
-        source: "fallback",
-      });
+    if (text) {
+      return NextResponse.json({ plan: text, source: "qwen" });
     }
 
-    const data = await res.json();
-    const plan = data.choices?.[0]?.message?.content?.trim() || null;
-
     return NextResponse.json({
-      plan: plan || fallbackPlan(concernSummary, routineText, prefsBlock),
-      source: plan ? "qwen" : "fallback",
+      plan: fallbackPlan(concernSummary, routineText, prefsBlock),
+      source: "fallback",
     });
   } catch (err) {
     console.error("Qwen route error:", err);

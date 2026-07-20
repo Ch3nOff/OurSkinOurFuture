@@ -1,16 +1,18 @@
 import { NextResponse } from "next/server";
 import { INGREDIENT_MAP, topConcerns } from "@/lib/skinAnalysis";
+import { callQwen } from "@/lib/qwen";
 
 /**
  * POST /api/recommend
  *
- * LIVE — calls the real Anthropic API server-side. Body: { concerns }.
+ * LIVE — calls Alibaba Qwen (via DashScope's OpenAI-compatible endpoint)
+ * server-side. Body: { concerns }.
  *
- * This runs server-side specifically so ANTHROPIC_API_KEY never reaches
- * the browser. The earlier artifact prototype called api.anthropic.com
- * directly from client code, which only worked there because that
- * environment injects the key for you — a real deployed app must not
- * do that, so this route is the fix, not a stylistic choice.
+ * The Qwen key (DASHSCOPE_API_KEY) is read ONLY here, server-side — the
+ * same key also powers the personalized plan at /api/qwen, so there is a
+ * single LLM provider across the app. Falls back to a templated note if
+ * the key is missing or the call fails, so the "Personal Note" always
+ * renders something useful.
  */
 export async function POST(request) {
   try {
@@ -19,20 +21,13 @@ export async function POST(request) {
       return NextResponse.json({ error: "Missing concerns data." }, { status: 400 });
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
     const top = topConcerns(concerns, 3);
-
-    if (!apiKey) {
-      return NextResponse.json({
-        recommendation: fallbackRecommendation(top),
-        source: "fallback",
-      });
-    }
-
     const concernSummary = top
       .map(
         (c) =>
-          `${c.label}: score ${c.score}/100 (relevant ingredients: ${INGREDIENT_MAP[c.key].join(", ")})`
+          `${c.label}: score ${c.score}/100 (relevant ingredients: ${
+            (INGREDIENT_MAP[c.key] || []).join(", ")
+          })`
       )
       .join("\n");
 
@@ -48,38 +43,21 @@ Write in this structure:
 
 Do not use markdown headings. Write as flowing text in short paragraphs. Maximum 180 words total.`;
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 1000,
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const text = await callQwen({
+      system:
+        "You are a skincare consultant. Output only the requested recommendation text.",
+      user: prompt,
+      maxTokens: 700,
+      temperature: 0.7,
     });
 
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("Anthropic API error:", response.status, errText);
-      return NextResponse.json({
-        recommendation: fallbackRecommendation(top),
-        source: "fallback",
-      });
+    if (text) {
+      return NextResponse.json({ recommendation: text, source: "qwen" });
     }
 
-    const data = await response.json();
-    const text = data.content
-      ?.filter((block) => block.type === "text")
-      .map((block) => block.text)
-      .join("\n");
-
     return NextResponse.json({
-      recommendation: text || fallbackRecommendation(top),
-      source: text ? "claude" : "fallback",
+      recommendation: fallbackRecommendation(top),
+      source: "fallback",
     });
   } catch (err) {
     console.error("Recommend route error:", err);
