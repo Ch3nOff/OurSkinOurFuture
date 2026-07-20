@@ -20,14 +20,15 @@ export async function POST(request) {
     }
 
     const apiKey = process.env.ANTHROPIC_API_KEY;
+    const top = topConcerns(concerns, 3);
+
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "ANTHROPIC_API_KEY is not configured on the server." },
-        { status: 500 }
-      );
+      return NextResponse.json({
+        recommendation: fallbackRecommendation(top),
+        source: "fallback",
+      });
     }
 
-    const top = topConcerns(concerns, 3);
     const concernSummary = top
       .map(
         (c) =>
@@ -64,10 +65,10 @@ Do not use markdown headings. Write as flowing text in short paragraphs. Maximum
     if (!response.ok) {
       const errText = await response.text();
       console.error("Anthropic API error:", response.status, errText);
-      return NextResponse.json(
-        { error: "Recommendation service is temporarily unavailable." },
-        { status: 502 }
-      );
+      return NextResponse.json({
+        recommendation: fallbackRecommendation(top),
+        source: "fallback",
+      });
     }
 
     const data = await response.json();
@@ -76,12 +77,28 @@ Do not use markdown headings. Write as flowing text in short paragraphs. Maximum
       .map((block) => block.text)
       .join("\n");
 
-    return NextResponse.json({ recommendation: text || null });
+    return NextResponse.json({
+      recommendation: text || fallbackRecommendation(top),
+      source: text ? "claude" : "fallback",
+    });
   } catch (err) {
     console.error("Recommend route error:", err);
     return NextResponse.json(
-      { error: "Recommendation generation failed." },
-      { status: 500 }
+      { recommendation: null, error: "Recommendation generation failed." },
+      { status: 200 }
     );
   }
+}
+
+function fallbackRecommendation(top) {
+  if (!top || !top.length) {
+    return "Your skin shows a balanced baseline. Keep a simple routine — gentle cleanser, moisturizer, and daily SPF — and revisit in a few weeks to track changes.";
+  }
+  const lines = top.map((c) => {
+    const ingredients = (INGREDIENT_MAP[c.key] || []).slice(0, 2).join(" or ");
+    return `For ${c.label.toLowerCase()}, consider adding ${ingredients}.`;
+  });
+  return `Your analysis highlights ${top[0].label.toLowerCase()} as the top priority. ${lines.join(
+    " "
+  )} Consistency over 4-12 weeks matters more than any single product — pair this with sleep, water, and daily sun protection.`;
 }

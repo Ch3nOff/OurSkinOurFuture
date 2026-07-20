@@ -29,6 +29,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
+  const [recSource, setRecSource] = useState(null);
   const [recLoading, setRecLoading] = useState(false);
 
   const [routine, setRoutine] = useState("");
@@ -82,6 +83,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       });
       const recData = await recRes.json();
       setRecommendation(recData.recommendation);
+      setRecSource(recData.source ?? null);
     } catch (err) {
       console.error("Analysis flow failed:", err);
     } finally {
@@ -424,9 +426,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   <span className="text-xs text-faint">Writing your personal recommendation...</span>
                 </div>
               ) : (
-                <p className="text-sm leading-relaxed whitespace-pre-line text-[#F0EBDD]">
-                  {recommendation || "Recommendation unavailable right now. Try uploading the photo again."}
-                </p>
+                <>
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-[#F0EBDD]">
+                    {recommendation || "Your personalized note will appear here after analysis."}
+                  </p>
+                  {!recLoading && recommendation && recSource === "fallback" && (
+                    <p className="text-[10px] font-mono text-faint mt-2">demo note · set ANTHROPIC_API_KEY for a live Claude note</p>
+                  )}
+                </>
               )}
             </section>
 
