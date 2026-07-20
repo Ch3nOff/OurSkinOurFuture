@@ -12,6 +12,9 @@ import {
   Loader2,
   LogIn,
   LogOut,
+  History,
+  ClipboardList,
+  HeartPulse,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns } from "@/lib/skinAnalysis";
@@ -22,14 +25,28 @@ import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
-  const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results
+  const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results | routine
   const [imagePreview, setImagePreview] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
   const [recLoading, setRecLoading] = useState(false);
+
+  const [routine, setRoutine] = useState("");
+  const [prefs, setPrefs] = useState({
+    sleep: "",
+    sunExposure: "",
+    diet: "",
+    stress: "",
+    activity: "",
+  });
+  const [plan, setPlan] = useState(null);
+  const [planLoading, setPlanLoading] = useState(false);
+  const [planSource, setPlanSource] = useState(null);
+
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
+  const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef(null);
 
   const supabase = createClient();
@@ -51,7 +68,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       const analyzeRes = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ seed }),
+        body: JSON.stringify({ image: dataUrl, seed }),
       });
       const result = await analyzeRes.json();
       setAnalysis(result);
@@ -98,7 +115,50 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setImagePreview(null);
     setAnalysis(null);
     setRecommendation(null);
+    setRoutine("");
+    setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
+    setPlan(null);
+    setPlanSource(null);
     setSaveState("idle");
+  }
+
+  async function generatePlan() {
+    setPlanLoading(true);
+    try {
+      const res = await fetch("/api/qwen", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          concerns: analysis.concerns,
+          routine,
+          preferences: prefs,
+        }),
+      });
+      const data = await res.json();
+      setPlan(data.plan);
+      setPlanSource(data.source ?? "fallback");
+    } catch {
+      setPlan(null);
+      setPlanSource("fallback");
+    } finally {
+      setPlanLoading(false);
+    }
+  }
+
+  function loadPastScan(scan) {
+    setAnalysis({
+      concerns: scan.concern_scores,
+      zones: scan.zone_scores,
+      mock: scan.mock ?? false,
+    });
+    setImagePreview(scan.image_url || null);
+    setRecommendation(scan.recommendation_text || null);
+    setRoutine(scan.routine || "");
+    setPlan(scan.qwen_plan || null);
+    setPlanSource(scan.qwen_plan ? "qwen" : null);
+    if (scan.preferences) setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "", ...scan.preferences });
+    setStage("results");
+    setShowHistory(false);
   }
 
   async function handleSave() {
@@ -110,9 +170,11 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
     setSaveState("saving");
     try {
-      let imageUrl = null;
+      let imageUrl = imagePreview;
 
-      if (imagePreview) {
+      // Upload the captured image only if it's a fresh data URL (not a
+      // already-saved public URL being re-viewed from history).
+      if (imagePreview && imagePreview.startsWith("data:")) {
         const blob = await (await fetch(imagePreview)).blob();
         const path = `${user.id}/${Date.now()}.jpg`;
         const { error: uploadError } = await supabase.storage.from("scan-photos").upload(path, blob, {
@@ -120,7 +182,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         });
         if (!uploadError) {
           const { data: publicUrlData } = supabase.storage.from("scan-photos").getPublicUrl(path);
-          imageUrl = publicUrlData?.publicUrl ?? null;
+          imageUrl = publicUrlData?.publicUrl ?? imageUrl;
         }
       }
 
@@ -132,6 +194,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           concern_scores: analysis.concerns,
           zone_scores: analysis.zones,
           recommendation_text: recommendation,
+          routine: routine || null,
+          preferences: prefs || null,
+          qwen_plan: plan || null,
         })
         .select()
         .single();
@@ -139,7 +204,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       if (insertError) throw insertError;
 
       setSaveState("saved");
-      setHistory((prev) => [inserted, ...prev]);
+      setHistory((prev) => [inserted, ...prev.filter((h) => h.id !== inserted.id)]);
     } catch (err) {
       console.error("Save failed:", err);
       setSaveState("error");
@@ -154,31 +219,87 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-ink">
             <Sparkles size={14} color="#C9A876" />
           </div>
-          <span className="text-sm font-semibold tracking-tight text-ink">
+            <span className="text-sm font-semibold tracking-tight text-ink">
             Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
           </span>
         </Link>
 
-        {user ? (
-          <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              window.location.href = "/";
-            }}
-            className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors"
-          >
-            <LogOut size={13} />
-            Sign out
-          </button>
-        ) : (
-          <Link href="/auth" className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors">
-            <LogIn size={13} />
-            Sign in
-          </Link>
-        )}
+        <div className="flex items-center gap-3">
+          {user && history.length > 0 && (
+            <button
+              onClick={() => setShowHistory((s) => !s)}
+              className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors"
+            >
+              <History size={13} />
+              History
+            </button>
+          )}
+          {user ? (
+            <button
+              onClick={async () => {
+                await supabase.auth.signOut();
+                window.location.href = "/";
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors"
+            >
+              <LogOut size={13} />
+              Sign out
+            </button>
+          ) : (
+            <Link href="/auth" className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors">
+              <LogIn size={13} />
+              Sign in
+            </Link>
+          )}
+        </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-5 pb-16">
+        {showHistory && (
+          <div className="mt-4 rounded-3xl p-5 bg-card border border-border">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs font-mono uppercase tracking-widest text-muted">Your past tests</div>
+              <button onClick={() => setShowHistory(false)} className="text-muted hover:text-ink">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {history.map((scan) => (
+                <button
+                  key={scan.id}
+                  onClick={() => loadPastScan(scan)}
+                  className="w-full flex items-center gap-3 rounded-2xl p-3 bg-paper border border-border hover:border-gold transition-colors text-left"
+                >
+                  {scan.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={scan.image_url} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
+                  ) : (
+                    <div className="w-10 h-10 rounded-xl bg-border shrink-0" />
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-xs font-semibold text-ink">
+                      {new Date(scan.created_at).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}{" "}
+                      ·{" "}
+                      {new Date(scan.created_at).toLocaleTimeString(undefined, {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                    <div className="text-[11px] text-faint truncate">
+                      {scan.routine ? "Routine + plan saved" : "Tap to view this test"}
+                    </div>
+                  </div>
+                  <ChevronRight size={16} className="ml-auto text-faint shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {stage === "capture" && (
           <div className="mt-6">
             <h1 className="text-3xl font-bold leading-tight mb-2 text-ink">
@@ -223,8 +344,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <div className="flex items-start gap-2 px-1">
               <AlertCircle size={14} className="mt-0.5 shrink-0 text-faint" />
               <p className="text-[11px] leading-relaxed text-faint">
-                This build runs on simulated analysis data for demo purposes. See ROADMAP.md for the plan to
-                connect the live YouCam Skin Analysis and AI Skin Simulation APIs.
+                Analysis is powered by the YouCam Skin Analysis API when configured; otherwise a demo model is
+                used. Your personalized plan is generated by Qwen. See ROADMAP.md for details.
               </p>
             </div>
           </div>
@@ -239,6 +360,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         {stage === "analyzing" && (
           <div className="mt-20 flex flex-col items-center">
             {imagePreview && (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={imagePreview}
                 alt="Preview"
@@ -256,11 +378,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 {imagePreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={imagePreview} alt="Scan result" className="w-11 h-11 rounded-xl object-cover border border-border" />
                 )}
                 <div>
                   <div className="text-sm font-semibold text-ink">Analysis Results</div>
-                  <div className="text-[11px] font-mono text-faint">8 indicators detected</div>
+                  <div className="text-[11px] font-mono text-faint">
+                    {analysis.mock ? "Demo model" : "YouCam Skin Analysis"}
+                  </div>
                 </div>
               </div>
               <button
@@ -317,6 +442,87 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               />
             </div>
 
+            <button
+              onClick={() => setStage("routine")}
+              className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-gold text-ink active:scale-[0.98] transition-transform"
+            >
+              <ClipboardList size={16} />
+              What should I do? (Your routine + lifestyle)
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        )}
+
+        {stage === "routine" && analysis && (
+          <div className="mt-4 space-y-4">
+            <button
+              onClick={() => setStage("results")}
+              className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink"
+            >
+              <X size={13} /> Back to results
+            </button>
+
+            <section className="rounded-3xl p-5 bg-card border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <ClipboardList size={14} className="text-gold" />
+                <span className="text-xs font-mono uppercase tracking-widest text-muted">Your current routine</span>
+              </div>
+              <p className="text-[11px] text-faint mb-2">
+                List the products you already use (cleanser, serum, moisturizer, sunscreen…). We'll show what they're
+                doing for your skin.
+              </p>
+              <textarea
+                value={routine}
+                onChange={(e) => setRoutine(e.target.value)}
+                rows={4}
+                placeholder="e.g. CeraVe cleanser, The Ordinary Niacinamide, La Roche-Posay SPF 50…"
+                className="w-full rounded-2xl p-3 bg-paper border border-border text-sm text-ink placeholder:text-faint focus:outline-none focus:border-gold"
+              />
+            </section>
+
+            <section className="rounded-3xl p-5 bg-card border border-border">
+              <div className="flex items-center gap-2 mb-3">
+                <HeartPulse size={14} className="text-gold" />
+                <span className="text-xs font-mono uppercase tracking-widest text-muted">Your daily life</span>
+              </div>
+              <p className="text-[11px] text-faint mb-3">
+                This helps the AI turn your facial signals into daily health habits. All optional.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <RoutineField label="Sleep" value={prefs.sleep} onChange={(v) => setPrefs((p) => ({ ...p, sleep: v }))} placeholder="~6h, irregular" />
+                <RoutineField label="Sun exposure" value={prefs.sunExposure} onChange={(v) => setPrefs((p) => ({ ...p, sunExposure: v }))} placeholder="Mostly indoors" />
+                <RoutineField label="Diet" value={prefs.diet} onChange={(v) => setPrefs((p) => ({ ...p, diet: v }))} placeholder="Lots of sugar" />
+                <RoutineField label="Stress" value={prefs.stress} onChange={(v) => setPrefs((p) => ({ ...p, stress: v }))} placeholder="High" />
+                <RoutineField label="Activity" value={prefs.activity} onChange={(v) => setPrefs((p) => ({ ...p, activity: v }))} placeholder="Gym 3x/week" />
+              </div>
+            </section>
+
+            {!plan && (
+              <button
+                onClick={generatePlan}
+                disabled={planLoading}
+                className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+              >
+                {planLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {planLoading ? "Generating your plan..." : "Generate my personalized plan"}
+              </button>
+            )}
+
+            {plan && (
+              <section className="rounded-3xl p-5 bg-ink">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={13} className="text-gold" />
+                    <span className="text-[11px] font-mono uppercase tracking-widest text-gold">Your plan</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-faint">
+                    {planSource === "qwen" ? "by Qwen" : "demo plan"}
+                  </span>
+                </div>
+                <p className="text-sm leading-relaxed whitespace-pre-line text-[#F0EBDD]">{plan}</p>
+              </section>
+            )}
+
             <div className="flex gap-2.5">
               <button
                 onClick={handleSave}
@@ -324,7 +530,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
               >
                 {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
-                {saveState === "idle" && (user ? "Save This Scan" : "Sign In to Save")}
+                {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
                 {saveState === "saving" && "Saving..."}
                 {saveState === "saved" && "Saved ✓"}
                 {saveState === "error" && "Retry Save"}
@@ -344,5 +550,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         )}
       </main>
     </div>
+  );
+}
+
+function RoutineField({ label, value, onChange, placeholder }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-medium text-muted">{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="mt-1 w-full rounded-xl p-2.5 bg-paper border border-border text-sm text-ink placeholder:text-faint focus:outline-none focus:border-gold"
+      />
+    </label>
   );
 }

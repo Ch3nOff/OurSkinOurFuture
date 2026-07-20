@@ -37,8 +37,13 @@ The product moved from a single-file React artifact prototype to a full deployab
 - **Comparison view**: every completed scan auto-compares against the user's most recent saved scan, with a manual picker to compare against any past scan instead
 
 **Explicitly mocked, needs replacing before submission:**
-- `mockSkinAnalysis()` in `lib/skinAnalysis.js`, called from `app/api/analyze/route.js` — stands in for YouCam Skin Analysis API
-- `mockSimulation()` in `lib/skinAnalysis.js`, called client-side from `TimelineSlider.jsx` — stands in for YouCam AI Skin Simulation API, and critically, only outputs *numbers*. The real API outputs actual before/after **images**. Replacing this is the single highest-leverage task on this roadmap — a visual projection is a fundamentally stronger demo than a number going down.
+- `mockSkinAnalysis()` in `lib/skinAnalysis.js` — stands in for YouCam Skin Analysis API. **As of 2026-07-20, `/api/analyze` now calls the REAL YouCam Skin Analysis API (`lib/youcam.js`) when `YOUCAM_API_KEY` is set, falling back to the mock otherwise. M2 backend proxy is effectively done; remaining work is verifying the live response-shape mapping.**
+- `mockSimulation()` in `lib/skinAnalysis.js`, called from `TimelineSlider.jsx` via `/api/simulate` — stands in for YouCam AI Skin Simulation API, and critically, only outputs *numbers*. The real API outputs actual before/after **images**. Replacing this is the single highest-leverage task on this roadmap — a visual projection is a fundamentally stronger demo than a number going down.
+
+**Newly added (2026-07-20):**
+- `app/api/qwen/route.js` — **live** Qwen (DashScope OpenAI-compatible) personalized plan generator. Takes the face `concerns`, the user's current `routine`, and `preferences` (daily-life context: sleep, sun, diet, stress, activity), and returns a plan that (1) validates the value of what the user already uses, (2) recommends actives per concern, and (3) translates facial signals into daily health/lifestyle habits. Falls back to a templated plan when `DASHSCOPE_API_KEY` is absent.
+- Dashboard flow now: capture → analyze → results → **routine** (current products + lifestyle prefs + Qwen plan) → save. Past scans are browsable via a **History** panel and reloadable.
+- `scans` table extended with `routine` (text), `preferences` (jsonb), `qwen_plan` (text). Migration: `supabase/migration_add_routine_prefs_qwen.sql`.
 
 ---
 
@@ -59,7 +64,7 @@ YouCam API keys can't live in client code. Minimal backend needed — not a full
 - [x] Next.js API route scaffolded: `/api/analyze` (structure in place, currently calls the mock function, not YouCam)
   - [x] New: `/api/simulate` route scaffolded (mirrors `/api/analyze` + `/api/recommend` server-side-key pattern; TimelineSlider now calls it, falling back to the local mock on failure). Currently returns mock numeric scores + `projectedImages: null` — same-file swap to YouCam once M1 confirms the real response shape.
 - [x] Server-side key handling pattern established — `/api/recommend` already proves this out for the Anthropic key; the same pattern applies directly to `YOUCAM_API_KEY` when it's added
-- [ ] `/api/analyze`: swap the mock call for a real YouCam request; response shape mapping already defined, just needs real field names once M1 confirms them
+ - [x] `/api/analyze`: now calls the REAL YouCam Skin Analysis API via `lib/youcam.js` when `YOUCAM_API_KEY` is set (file upload → task → poll → map scores), falling back to the mock otherwise. Verify live response-shape mapping against the real API.
 - [ ] `/api/simulate`: build from scratch — accepts baseline image + target concerns, returns the projected image(s) from YouCam
 - [ ] Basic error handling: image too large, unsupported format, API quota exceeded — each needs a real user-facing message, not a stack trace (partially done in `/api/analyze` and `/api/recommend`; needs the same treatment once real YouCam calls are added)
 

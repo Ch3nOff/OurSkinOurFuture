@@ -11,6 +11,9 @@ create table if not exists public.scans (
   concern_scores jsonb not null,
   zone_scores jsonb not null,
   recommendation_text text,
+  routine text,
+  preferences jsonb,
+  qwen_plan text,
   created_at timestamptz not null default now()
 );
 
