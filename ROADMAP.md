@@ -57,7 +57,7 @@ Get both YouCam endpoints returning real data outside the app, before touching f
 ### M2 — Backend Proxy (Aug 5–8)
 YouCam API keys can't live in client code. Minimal backend needed — not a full product backend, just an authenticated pass-through.
 - [x] Next.js API route scaffolded: `/api/analyze` (structure in place, currently calls the mock function, not YouCam)
-- [ ] New: `/api/simulate` route does not exist yet — the timeline slider currently computes its curve client-side in `TimelineSlider.jsx`. A real image-based simulation needs its own server route, same pattern as `/api/analyze`
+  - [x] New: `/api/simulate` route scaffolded (mirrors `/api/analyze` + `/api/recommend` server-side-key pattern; TimelineSlider now calls it, falling back to the local mock on failure). Currently returns mock numeric scores + `projectedImages: null` — same-file swap to YouCam once M1 confirms the real response shape.
 - [x] Server-side key handling pattern established — `/api/recommend` already proves this out for the Anthropic key; the same pattern applies directly to `YOUCAM_API_KEY` when it's added
 - [ ] `/api/analyze`: swap the mock call for a real YouCam request; response shape mapping already defined, just needs real field names once M1 confirms them
 - [ ] `/api/simulate`: build from scratch — accepts baseline image + target concerns, returns the projected image(s) from YouCam

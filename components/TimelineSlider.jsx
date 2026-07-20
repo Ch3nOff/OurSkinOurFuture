@@ -1,12 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { TrendingUp } from "lucide-react";
 import { mockSimulation, topConcerns, overallScore } from "@/lib/skinAnalysis";
 
 export default function TimelineSlider({ baselineConcerns, totalWeeks = 12 }) {
   const [week, setWeek] = useState(0);
-  const simulated = mockSimulation(baselineConcerns, week, totalWeeks);
+  const [simulated, setSimulated] = useState(() =>
+    mockSimulation(baselineConcerns, 0, totalWeeks)
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setWeek(0);
+    async function load() {
+      try {
+        const res = await fetch("/api/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ baselineConcerns, weekIndex: 0, totalWeeks }),
+        });
+        if (!res.ok) throw new Error("simulate failed");
+        const data = await res.json();
+        if (!cancelled && data.projectedScores) setSimulated(data.projectedScores);
+      } catch {
+        // Fall back to the local mock so the slider always renders.
+        if (!cancelled) setSimulated(mockSimulation(baselineConcerns, 0, totalWeeks));
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [baselineConcerns, totalWeeks]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadWeek() {
+      try {
+        const res = await fetch("/api/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ baselineConcerns, weekIndex: week, totalWeeks }),
+        });
+        if (!res.ok) throw new Error("simulate failed");
+        const data = await res.json();
+        if (!cancelled && data.projectedScores) setSimulated(data.projectedScores);
+      } catch {
+        if (!cancelled) setSimulated(mockSimulation(baselineConcerns, week, totalWeeks));
+      }
+    }
+    if (week === 0) return;
+    loadWeek();
+    return () => {
+      cancelled = true;
+    };
+  }, [week, baselineConcerns, totalWeeks]);
+
   const overallBaseline = overallScore(baselineConcerns);
   const overallNow = overallScore(simulated);
   const improvementPct =
