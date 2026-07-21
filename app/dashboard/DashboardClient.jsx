@@ -422,6 +422,24 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </button>
             </div>
 
+            {/* Save button - available immediately on results */}
+            <div className="mb-4">
+              <button
+                onClick={handleSave}
+                disabled={saveState === "saving" || saveState === "saved"}
+                className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+              >
+                {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
+                {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
+                {saveState === "saving" && "Saving..."}
+                {saveState === "saved" && "Saved ✓"}
+                {saveState === "error" && "Retry Save"}
+              </button>
+              {saveState === "error" && (
+                <p className="text-xs text-clay mt-2 text-center">Couldn't save — check your connection and try again.</p>
+              )}
+            </div>
+
             {/* Score legend */}
             <div className="mb-5 rounded-2xl p-3 bg-card border border-border">
               <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-2">How to read scores</div>
@@ -440,7 +458,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
-              <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} />
+              <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} concerns={analysis.concerns} />
             </section>
 
             {(analysis.overall != null || analysis.skinAge != null || analysis.skinTypes?.length) && (

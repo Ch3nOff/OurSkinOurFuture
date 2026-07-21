@@ -1,21 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TrendingUp } from "lucide-react";
-import { mockSimulation, topConcerns, overallScore } from "@/lib/skinAnalysis";
+import { TrendingUp, AlertCircle } from "lucide-react";
+import { topConcerns, overallScore } from "@/lib/skinAnalysis";
 
 export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 12 }) {
   const [week, setWeek] = useState(0);
   const [simulated, setSimulated] = useState(() =>
-    mockSimulation(baselineConcerns, 0, totalWeeks)
+    baselineConcerns
   );
   const [projectedImage, setProjectedImage] = useState(null);
   const [imgLoading, setImgLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
     setWeek(0);
     setProjectedImage(null);
+    setError(null);
     async function load(weekIndex) {
       try {
         const res = await fetch("/api/simulate", {
@@ -28,7 +30,10 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
             totalWeeks,
           }),
         });
-        if (!res.ok) throw new Error("simulate failed");
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Simulation failed");
+        }
         const data = await res.json();
         if (cancelled) return;
         if (data.projectedScores) setSimulated(data.projectedScores);
@@ -38,9 +43,9 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         } else {
           setProjectedImage(null);
         }
-      } catch {
+      } catch (err) {
         if (cancelled) return;
-        setSimulated(mockSimulation(baselineConcerns, weekIndex, totalWeeks));
+        setError(err.message || "Simulation failed");
         setProjectedImage(null);
       } finally {
         if (!cancelled) setImgLoading(false);
@@ -67,7 +72,10 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
             totalWeeks,
           }),
         });
-        if (!res.ok) throw new Error("simulate failed");
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || "Simulation failed");
+        }
         const data = await res.json();
         if (cancelled) return;
         if (data.projectedScores) setSimulated(data.projectedScores);
@@ -77,9 +85,9 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         } else {
           setProjectedImage(null);
         }
-      } catch {
+      } catch (err) {
         if (cancelled) return;
-        setSimulated(mockSimulation(baselineConcerns, week, totalWeeks));
+        setError(err.message || "Simulation failed");
         setProjectedImage(null);
       } finally {
         if (!cancelled) setImgLoading(false);
@@ -108,6 +116,13 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         <TrendingUp size={20} className={improvementPct > 0 ? "text-sage" : "text-muted"} />
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-2xl p-3 bg-clay/10 border border-clay/40 flex items-start gap-2">
+          <AlertCircle size={14} className="mt-0.5 shrink-0 text-clay" />
+          <p className="text-xs text-clay">{error}</p>
+        </div>
+      )}
+
       {projectedImage ? (
         <div className="mb-4 rounded-2xl overflow-hidden border border-border bg-paper">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -122,7 +137,7 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         </div>
       ) : (
         <div className="mb-4 rounded-2xl h-32 flex items-center justify-center bg-paper border border-border text-[11px] text-faint">
-          {imgLoading ? "Rendering projection…" : "Projected image will appear here"}
+          {imgLoading ? "Rendering projection…" : error ? "Projection unavailable" : "Projected image will appear here"}
         </div>
       )}
 
@@ -144,7 +159,7 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
       <div className="grid grid-cols-2 gap-2 mt-5">
         {topConcerns(baselineConcerns, 4).map(({ key, label }) => {
           const before = baselineConcerns[key];
-          const now = simulated[key];
+          const now = simulated[key] ?? before;
           return (
             <div key={key} className="rounded-xl px-3 py-2.5 flex items-center justify-between bg-paper border border-border">
               <span className="text-xs font-medium text-[#4A453B]">{label}</span>
