@@ -28,6 +28,7 @@ export async function POST(request) {
       return NextResponse.json({ recommendations: [], error: error.message }, { status: 200 });
     }
 
+    console.log("Product recommendations RPC result:", { concernSlugs, count: data?.length, data });
     return NextResponse.json({ recommendations: data || [] });
   } catch (err) {
     console.error("Product recommend route error:", err.message);

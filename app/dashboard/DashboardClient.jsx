@@ -118,12 +118,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           });
 
         if (topSlugs.length > 0) {
+          console.log("Fetching products for slugs:", topSlugs);
           const prodRes = await fetch("/api/products/recommend", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ concernSlugs: topSlugs, countryCode: "US" }),
           });
           const prodData = await prodRes.json();
+          console.log("Product recommendations response:", prodData);
           setProducts(prodData.recommendations || []);
         }
       } catch {
@@ -641,9 +643,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             </div>
 
             {/* Product Recommendations from Supabase */}
-            {products.length > 0 && (
-              <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
-                <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Recommended For You</div>
+            <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
+              <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Recommended For You</div>
+              {productsLoading ? (
+                <div className="text-center py-4">
+                  <span className="text-xs text-faint">Loading recommendations…</span>
+                </div>
+              ) : products.length > 0 ? (
                 <div className="space-y-2">
                   {products.map((prod, i) => (
                     <a
@@ -673,14 +679,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     </a>
                   ))}
                 </div>
-              </section>
-            )}
-
-            {productsLoading && (
-              <div className="text-center py-3">
-                <span className="text-xs text-faint">Loading recommendations…</span>
-              </div>
-            )}
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-xs text-faint mb-2">Product recommendations are being set up.</p>
+                  <p className="text-[11px] text-faint">Check back soon for Sephora product suggestions matched to your scan.</p>
+                </div>
+              )}
+            </section>
 
             <button
               onClick={() => setStage("routine")}
