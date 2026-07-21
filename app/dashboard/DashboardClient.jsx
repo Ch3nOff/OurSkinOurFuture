@@ -681,13 +681,21 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   ))}
                 </div>
               ) : (
-                <button
-                  onClick={fetchProducts}
-                  className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform"
-                >
-                  <Sparkles size={15} />
-                  Check Products
-                </button>
+                <div className="text-center py-4">
+                  <p className="text-xs text-faint mb-3">No products matched your scan yet.</p>
+                  <button
+                    onClick={fetchProducts}
+                    className="rounded-2xl px-5 py-2.5 text-xs font-semibold bg-sage text-paper active:scale-[0.98] transition-transform"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <Sparkles size={13} />
+                      Check Products
+                    </span>
+                  </button>
+                  <p className="text-[10px] text-faint mt-3">
+                    Make sure you ran the 3 Supabase SQL files in order: 01_schema.sql → 02_seed_data.sql → 03_core_queries.sql
+                  </p>
+                </div>
               )}
             </section>
 

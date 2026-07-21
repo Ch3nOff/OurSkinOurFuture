@@ -25,10 +25,13 @@ export async function POST(request) {
 
     if (error) {
       console.error("Product recommendation RPC error:", error);
-      return NextResponse.json({ recommendations: [], error: error.message }, { status: 200 });
+      return NextResponse.json({
+        recommendations: [],
+        error: error.message || "RPC not found — run 03_core_queries.sql in Supabase",
+      }, { status: 200 });
     }
 
-    console.log("Product recommendations RPC result:", { concernSlugs, count: data?.length, data });
+    console.log("Product recommendations RPC result:", { concernSlugs, count: data?.length, sample: data?.[0] });
     return NextResponse.json({ recommendations: data || [] });
   } catch (err) {
     console.error("Product recommend route error:", err.message);
