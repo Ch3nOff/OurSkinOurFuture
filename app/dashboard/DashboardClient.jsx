@@ -655,25 +655,28 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   {products.map((prod, i) => (
                     <a
                       key={i}
-                      href={prod.product_url}
+                      href={prod.purchase_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-between rounded-2xl p-3 bg-paper border border-border hover:border-gold transition-colors"
                     >
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-ink truncate">{prod.product_name}</div>
-                        <div className="text-[11px] text-muted">{prod.brand_name} · {prod.concern_label}</div>
-                        <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#F0EBDD] text-[#6B5D42] mt-1 inline-block">
-                          {prod.tier}
-                        </span>
+                        <div className="text-[11px] text-muted">{prod.brand_name} · {prod.concern_display_name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
+                            {prod.tier}
+                          </span>
+                          {prod.headline_ingredient && (
+                            <span className="text-[10px] text-muted">{prod.headline_ingredient}</span>
+                          )}
+                        </div>
                       </div>
                       <div className="text-right shrink-0 ml-3">
-                        {prod.in_stock ? (
+                        {prod.price_local_cents != null && (
                           <span className="text-sm font-semibold text-ink">
-                            {prod.currency} {prod.price?.toFixed(2)}
+                            {(prod.price_local_cents / 100).toFixed(2)} {prod.local_currency || ""}
                           </span>
-                        ) : (
-                          <span className="text-xs text-clay">Out of stock</span>
                         )}
                         <ChevronRight size={14} className="ml-1 text-faint" />
                       </div>
@@ -693,7 +696,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     </span>
                   </button>
                   <p className="text-[10px] text-faint mt-3">
-                    Make sure you ran the 3 Supabase SQL files in order: 01_schema.sql → 02_seed_data.sql → 03_core_queries.sql
+                    Make sure the 3 SQL files ran in Supabase. Check Vercel logs for errors.
                   </p>
                 </div>
               )}

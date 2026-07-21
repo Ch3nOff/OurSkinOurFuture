@@ -6,9 +6,9 @@ import { createClient } from "@/lib/supabase/server";
  *
  * Body: { concernSlugs: string[], countryCode?: string }
  *
- * Calls the Supabase RPC `get_recommendations` which returns ranked,
- * geo-filtered, in-stock products from Sephora matched to the user's
- * skin concerns via the ingredient→product mapping tables.
+ * Calls the Supabase RPC `get_recommendations` which returns ranked
+ * product recommendations per concern tier, matched via the
+ * concern_ingredients → product_ingredients mapping.
  */
 export async function POST(request) {
   try {
@@ -25,10 +25,7 @@ export async function POST(request) {
 
     if (error) {
       console.error("Product recommendation RPC error:", error);
-      return NextResponse.json({
-        recommendations: [],
-        error: error.message || "RPC not found — run 03_core_queries.sql in Supabase",
-      }, { status: 200 });
+      return NextResponse.json({ recommendations: [], error: error.message }, { status: 200 });
     }
 
     console.log("Product recommendations RPC result:", { concernSlugs, count: data?.length, sample: data?.[0] });
