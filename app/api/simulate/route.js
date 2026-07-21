@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server";
 import { mockSimulation } from "@/lib/skinAnalysis";
-import { simulateWithYouCam } from "@/lib/youcam";
+import { simulateWithYouCamFromUrl } from "@/lib/youcam";
+import { createClient } from "@/lib/supabase/server";
 
-/**
- * POST /api/simulate
- *
- * Body: { image, baselineConcerns, weekIndex, totalWeeks }
- *
- * When YOUCAM_API_KEY is set, the uploaded image is forwarded to the real
- * YouCam AI Skin Simulation API (server-side only), which returns an actual
- * before/after PROJECTION IMAGE. The simulation intensity scales with the
- * requested week so dragging the timeline shows progressively improved skin.
- *
- * Always uses the live API when the key is present (no silent demo). The
- * local mock only runs without a key so the UI still renders in dev.
- */
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -26,20 +14,38 @@ export async function POST(request) {
       return NextResponse.json({ projectedScores: simulated, projectedImages: null, mock: true });
     }
 
-    if (typeof image !== "string" || !image.startsWith("data:")) {
+    if (!image) {
       return NextResponse.json(
-        { error: "A valid image (data URL) is required for simulation." },
+        { error: "An image is required for simulation." },
         { status: 400 }
       );
     }
 
-    // Intensity grows from 0 at week 0 to 1 at the final week.
-    const intensity = totalWeeks > 0 ? weekIndex / totalWeeks : 0;
-    const [meta, b64] = image.split(",");
-    const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
-    const buffer = Buffer.from(b64, "base64");
+    let publicUrl = image;
+    // If the client sent a data URL, upload to Supabase Storage first
+    // so YouCam can download it from a public URL.
+    if (image.startsWith("data:")) {
+      const [meta, b64] = image.split(",");
+      const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
+      const buffer = Buffer.from(b64, "base64");
+      const supabase = createClient();
+      const blob = new Blob([buffer], { type: contentType });
+      const path = `scans/sim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+      const { error: uploadError } = await supabase.storage
+        .from("scan-photos")
+        .upload(path, blob, { contentType, upsert: true });
+      if (uploadError) {
+        return NextResponse.json(
+          { error: `Image upload failed: ${uploadError.message}` },
+          { status: 500 }
+        );
+      }
+      const { data: publicData } = supabase.storage.from("scan-photos").getPublicUrl(path);
+      publicUrl = publicData?.publicUrl || image;
+    }
 
-    const { imageUrl } = await simulateWithYouCam(buffer, contentType, intensity);
+    const intensity = totalWeeks > 0 ? weekIndex / totalWeeks : 0;
+    const { imageUrl } = await simulateWithYouCamFromUrl(publicUrl, intensity);
 
     const projectedScores = mockSimulation(baselineConcerns, weekIndex, totalWeeks);
 

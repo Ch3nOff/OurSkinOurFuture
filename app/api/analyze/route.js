@@ -1,21 +1,8 @@
 import { NextResponse } from "next/server";
 import { mockSkinAnalysis } from "@/lib/skinAnalysis";
-import { analyzeWithYouCam, friendlyYouCamError } from "@/lib/youcam";
+import { analyzeWithYouCamFromUrl, friendlyYouCamError } from "@/lib/youcam";
+import { createClient } from "@/lib/supabase/server";
 
-/**
- * POST /api/analyze
- *
- * Body: { image: "data:image/jpeg;base64,...." }
- *
- * When YOUCAM_API_KEY is set, the uploaded image is forwarded to the real
- * YouCam Skin Analysis API (server-side only). The response is mapped onto
- * { concerns, zones, masks } — the same shape the frontend consumes.
- *
- * Per project requirement this route ALWAYS uses the live API when the key
- * is present and surfaces real errors (no silent demo fallback). The local
- * mock only runs when the key is absent, so a developer without a key can
- * still run the UI.
- */
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -38,12 +25,46 @@ export async function POST(request) {
     const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
     const buffer = Buffer.from(b64, "base64");
 
-    const { concerns, zones, masks, overall, skinAge, skinTypes, resizeImage } = await analyzeWithYouCam(buffer, contentType);
+    // Upload to Supabase Storage so we get a public URL that YouCam can
+    // download without any special headers (avoids S3 pre-signed URL
+    // download failures).
+    const supabase = createClient();
+    const blob = new Blob([buffer], { type: contentType });
+    const path = `scans/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from("scan-photos")
+      .upload(path, blob, { contentType, upsert: true });
 
-    // Simulate a touch of network latency so the loading state feels real.
+    if (uploadError) {
+      console.error("Supabase upload failed:", uploadError);
+      return NextResponse.json(
+        { error: `Image upload failed: ${uploadError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const { data: publicData } = supabase.storage.from("scan-photos").getPublicUrl(path);
+    const publicUrl = publicData?.publicUrl;
+    if (!publicUrl) {
+      return NextResponse.json({ error: "Failed to get public image URL." }, { status: 500 });
+    }
+
+    const { concerns, zones, masks, overall, skinAge, skinTypes, resizeImage } =
+      await analyzeWithYouCamFromUrl(publicUrl);
+
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    return NextResponse.json({ concerns, zones, masks, overall, skinAge, skinTypes, resizeImage, mock: false });
+    return NextResponse.json({
+      concerns,
+      zones,
+      masks,
+      overall,
+      skinAge,
+      skinTypes,
+      resizeImage,
+      imageUrl: publicUrl,
+      mock: false,
+    });
   } catch (err) {
     console.error("Analyze route error:", err.message);
     const code = err.message?.match(/error_[a-z_]+/)?.[0];
