@@ -32,6 +32,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [recommendation, setRecommendation] = useState(null);
   const [recSource, setRecSource] = useState(null);
   const [recLoading, setRecLoading] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
 
   const [routine, setRoutine] = useState("");
   const [prefs, setPrefs] = useState({
@@ -94,6 +96,41 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         setRecommendation(recData.recommendation);
         setRecSource(recData.source ?? null);
       }
+
+      setProductsLoading(true);
+      try {
+        const topSlugs = Object.entries(result.concerns || {})
+          .filter(([, s]) => typeof s === "number" && s >= 31)
+          .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+          .slice(0, 4)
+          .map(([slug]) => {
+            const map = {
+              acne: "acne-inflammation",
+              wrinkle: "fine-lines-wrinkles",
+              redness: "redness",
+              darkCircle: "dark-circles",
+              pore: "pores",
+              texture: "skin-texture",
+              spot: "hyperpigmentation",
+              moisture: "moisture",
+            };
+            return map[slug] || slug;
+          });
+
+        if (topSlugs.length > 0) {
+          const prodRes = await fetch("/api/products/recommend", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ concernSlugs: topSlugs, countryCode: "US" }),
+          });
+          const prodData = await prodRes.json();
+          setProducts(prodData.recommendations || []);
+        }
+      } catch {
+        // Products are a nice-to-have; don't block the results screen.
+      } finally {
+        setProductsLoading(false);
+      }
     } catch (err) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
@@ -133,6 +170,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
     setPlan(null);
     setPlanSource(null);
+    setProducts([]);
     setSaveState("idle");
   }
 
@@ -601,6 +639,48 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 history={history}
               />
             </div>
+
+            {/* Product Recommendations from Supabase */}
+            {products.length > 0 && (
+              <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
+                <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Recommended For You</div>
+                <div className="space-y-2">
+                  {products.map((prod, i) => (
+                    <a
+                      key={i}
+                      href={prod.product_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between rounded-2xl p-3 bg-paper border border-border hover:border-gold transition-colors"
+                    >
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-ink truncate">{prod.product_name}</div>
+                        <div className="text-[11px] text-muted">{prod.brand_name} · {prod.concern_label}</div>
+                        <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#F0EBDD] text-[#6B5D42] mt-1 inline-block">
+                          {prod.tier}
+                        </span>
+                      </div>
+                      <div className="text-right shrink-0 ml-3">
+                        {prod.in_stock ? (
+                          <span className="text-sm font-semibold text-ink">
+                            {prod.currency} {prod.price?.toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-clay">Out of stock</span>
+                        )}
+                        <ChevronRight size={14} className="ml-1 text-faint" />
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {productsLoading && (
+              <div className="text-center py-3">
+                <span className="text-xs text-faint">Loading recommendations…</span>
+              </div>
+            )}
 
             <button
               onClick={() => setStage("routine")}
