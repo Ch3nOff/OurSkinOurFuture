@@ -17,7 +17,7 @@ import {
   HeartPulse,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { topConcerns } from "@/lib/skinAnalysis";
+import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP } from "@/lib/skinAnalysis";
 import FaceZoneMap from "@/components/FaceZoneMap";
 import IngredientCard from "@/components/IngredientCard";
 import TimelineSlider from "@/components/TimelineSlider";
@@ -439,6 +439,73 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 <p className="text-xs text-clay mt-2 text-center">Couldn't save — check your connection and try again.</p>
               )}
             </div>
+
+            {/* Analysis Summary: overall + per-concern breakdown */}
+            <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
+              <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Analysis Summary</div>
+              
+              {/* Overall scores row */}
+              <div className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-border">
+                {analysis.overall != null && (
+                  <div className="text-center">
+                    <div className="text-3xl font-semibold text-ink">{analysis.overall}</div>
+                    <div className="text-[11px] text-muted">Overall Score</div>
+                  </div>
+                )}
+                {analysis.skinAge != null && (
+                  <div className="text-center">
+                    <div className="text-3xl font-semibold text-ink">{analysis.skinAge}</div>
+                    <div className="text-[11px] text-muted">Skin Age</div>
+                  </div>
+                )}
+                {analysis.skinTypes?.length > 0 && (
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {analysis.skinTypes.map((st, i) => (
+                      <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
+                        {st.region === "whole" ? "Skin" : st.region.replace("_", " ")}: {st.skinType}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Per-concern breakdown */}
+              <div className="space-y-2.5">
+                {Object.entries(analysis.concerns || {})
+                  .filter(([, score]) => typeof score === "number")
+                  .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+                  .map(([key, score]) => {
+                    const label = CONCERN_LABELS[key] || key;
+                    const explanation = concernExplanation(key);
+                    const ingredients = INGREDIENT_MAP[key] || [];
+                    const severity = score >= 61 ? "High" : score >= 31 ? "Moderate" : "Low";
+                    const severityColor = score >= 61 ? "#B85C4A" : score >= 31 ? "#C9A876" : "#4A6355";
+                    return (
+                      <div key={key} className="rounded-2xl p-3 bg-paper border border-border">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-sm font-semibold text-ink">{label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full" style={{ color: severityColor, background: `${severityColor}15` }}>
+                              {severity}
+                            </span>
+                            <span className="text-lg font-semibold font-mono" style={{ color: severityColor }}>{score}</span>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-muted mb-2">{explanation}</p>
+                        {ingredients.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {ingredients.map((ing) => (
+                              <span key={ing} className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
+                                {ing}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+              </div>
+            </section>
 
             {/* Score legend */}
             <div className="mb-5 rounded-2xl p-3 bg-card border border-border">
