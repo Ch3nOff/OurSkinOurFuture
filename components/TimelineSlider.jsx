@@ -129,14 +129,15 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
           <img
             src={projectedImage}
             alt={`Projected skin at week ${week}`}
-            className="w-full h-56 object-cover"
+            className="w-full aspect-square object-contain"
+            style={{ background: "#FDFBF6" }}
           />
           {imgLoading && (
             <div className="text-[11px] text-center text-faint py-1">Rendering projection…</div>
           )}
         </div>
       ) : (
-        <div className="mb-4 rounded-2xl h-32 flex items-center justify-center bg-paper border border-border text-[11px] text-faint">
+        <div className="mb-4 rounded-2xl aspect-square flex items-center justify-center bg-paper border border-border text-[11px] text-faint">
           {imgLoading ? "Rendering projection…" : error ? "Projection unavailable" : "Projected image will appear here"}
         </div>
       )}
