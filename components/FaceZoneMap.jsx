@@ -59,7 +59,12 @@ export default function FaceZoneMap({ image, zones, masks, concerns }) {
       <div className="relative w-full max-w-[280px] mx-auto rounded-2xl overflow-hidden bg-paper border border-border">
         {image && (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="Scan" className="w-full aspect-[4/5] object-cover" />
+          <img
+            src={image}
+            alt="Scan"
+            className="w-full aspect-[3/4] object-contain"
+            style={{ background: "#FDFBF6" }}
+          />
         )}
 
         {/* Mask overlay layer */}
