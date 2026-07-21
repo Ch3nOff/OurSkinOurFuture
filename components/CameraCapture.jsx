@@ -106,7 +106,7 @@ export default function CameraCapture({ onCapture, onClose }) {
             {ready && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {/* Face guide overlay */}
-                <svg viewBox="0 0 300 300" className="w-3/5 max-w-[220px] opacity-70">
+                <svg viewBox="0 0 300 300" className="w-5/6 max-w-[300px] opacity-80">
                   <ellipse
                     cx="150"
                     cy="130"
