@@ -78,36 +78,12 @@ Maximum 320 words total. No markdown tables. Plain text under the headings above
       temperature: 0.7,
     });
 
-    if (text) {
-      return NextResponse.json({ plan: text, source: "qwen" });
-    }
-
-    return NextResponse.json({
-      plan: fallbackPlan(concernSummary, routineText, prefsBlock),
-      source: "fallback",
-    });
+    return NextResponse.json({ plan: text, source: "qwen" });
   } catch (err) {
     console.error("Qwen route error:", err);
     return NextResponse.json(
-      { error: "Personalized plan generation failed." },
-      { status: 500 }
+      { error: err.message || "Personalized plan generation failed." },
+      { status: err.status || 500 }
     );
   }
-}
-
-function fallbackPlan(concernSummary, routineText, prefsBlock) {
-  return `## What your current routine is doing for you
-Based on your analysis, lean into the products that target your top concerns and drop anything that feels redundant.
-
-## What to add or change
-- Match each top concern to a proven active (e.g. Niacinamide for redness/ pores, Retinol for texture/ fine lines, Vitamin C for spots).
-- Introduce one new active at a time, at night, 2-3x per week to start.
-
-## Daily habits your skin is asking for
-- Sleep 7-8 hours; skin repairs overnight.
-- Drink enough water and use broad-spectrum SPF every morning.
-- Manage stress and favor an anti-inflammatory diet (less sugar, more omega-3).
-
-## Realistic expectation
-Consistent routine plus habits over 4-12 weeks beats any single product.`;
 }

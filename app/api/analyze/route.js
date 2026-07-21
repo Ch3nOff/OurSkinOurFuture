@@ -38,12 +38,12 @@ export async function POST(request) {
     const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
     const buffer = Buffer.from(b64, "base64");
 
-    const { concerns, zones, masks } = await analyzeWithYouCam(buffer, contentType);
+    const { concerns, zones, masks, overall, skinAge, skinTypes, resizeImage } = await analyzeWithYouCam(buffer, contentType);
 
     // Simulate a touch of network latency so the loading state feels real.
     await new Promise((resolve) => setTimeout(resolve, 300));
 
-    return NextResponse.json({ concerns, zones, masks, mock: false });
+    return NextResponse.json({ concerns, zones, masks, overall, skinAge, skinTypes, resizeImage, mock: false });
   } catch (err) {
     console.error("Analyze route error:", err.message);
     const code = err.message?.match(/error_[a-z_]+/)?.[0];

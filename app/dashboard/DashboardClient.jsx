@@ -87,8 +87,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         body: JSON.stringify({ concerns: result.concerns }),
       });
       const recData = await recRes.json();
-      setRecommendation(recData.recommendation);
-      setRecSource(recData.source ?? null);
+      if (recData.error) {
+        setRecommendation(`Note unavailable: ${recData.error}`);
+        setRecSource("error");
+      } else {
+        setRecommendation(recData.recommendation);
+        setRecSource(recData.source ?? null);
+      }
     } catch (err) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
@@ -144,11 +149,16 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         }),
       });
       const data = await res.json();
-      setPlan(data.plan);
-      setPlanSource(data.source ?? "fallback");
-    } catch {
-      setPlan(null);
-      setPlanSource("fallback");
+      if (data.error) {
+        setPlan(`Plan unavailable: ${data.error}`);
+        setPlanSource("error");
+      } else {
+        setPlan(data.plan);
+        setPlanSource(data.source ?? "qwen");
+      }
+    } catch (err) {
+      setPlan(`Plan unavailable: ${err.message || "Failed to generate plan."}`);
+      setPlanSource("error");
     } finally {
       setPlanLoading(false);
     }
@@ -430,8 +440,37 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
-              <FaceZoneMap image={imagePreview} zones={analysis.zones} />
+              <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} />
             </section>
+
+            {(analysis.overall != null || analysis.skinAge != null || analysis.skinTypes?.length) && (
+              <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
+                <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Overall</div>
+                <div className="flex flex-wrap gap-4">
+                  {analysis.overall != null && (
+                    <div>
+                      <div className="text-2xl font-semibold text-ink">{analysis.overall}</div>
+                      <div className="text-[11px] text-muted">Overall score</div>
+                    </div>
+                  )}
+                  {analysis.skinAge != null && (
+                    <div>
+                      <div className="text-2xl font-semibold text-ink">{analysis.skinAge}</div>
+                      <div className="text-[11px] text-muted">Skin age</div>
+                    </div>
+                  )}
+                  {analysis.skinTypes?.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {analysis.skinTypes.map((st, i) => (
+                        <span key={i} className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
+                          {st.region === "whole" ? "Skin" : st.region.replace("_", " ")}: {st.skinType}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
 
             <section className="mb-4">
               <div className="text-xs font-mono uppercase tracking-widest mb-3 px-1 text-muted">
@@ -456,11 +495,11 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 </div>
               ) : (
                 <>
-                  <p className="text-sm leading-relaxed whitespace-pre-line text-[#F0EBDD]">
+                  <p className={`text-sm leading-relaxed whitespace-pre-line ${recSource === "error" ? "text-clay" : "text-[#F0EBDD]"}`}>
                     {recommendation || "Your personalized note will appear here after analysis."}
                   </p>
-                  {!recLoading && recommendation && recSource === "fallback" && (
-                    <p className="text-[10px] font-mono text-faint mt-2">demo note · set DASHSCOPE_API_KEY for a live Qwen note</p>
+                  {!recLoading && recommendation && recSource === "error" && (
+                    <p className="text-[10px] font-mono text-clay mt-2">Qwen error · check DASHSCOPE_API_KEY in Vercel</p>
                   )}
                 </>
               )}
@@ -545,17 +584,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             )}
 
             {plan && (
-              <section className="rounded-3xl p-5 bg-ink">
+              <section className={`rounded-3xl p-5 ${planSource === "error" ? "bg-clay/10 border border-clay/40" : "bg-ink"}`}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Sparkles size={13} className="text-gold" />
-                    <span className="text-[11px] font-mono uppercase tracking-widest text-gold">Your plan</span>
+                    <Sparkles size={13} className={planSource === "error" ? "text-clay" : "text-gold"} />
+                    <span className={`text-[11px] font-mono uppercase tracking-widest ${planSource === "error" ? "text-clay" : "text-gold"}`}>
+                      {planSource === "error" ? "Plan unavailable" : "Your plan"}
+                    </span>
                   </div>
                   <span className="text-[10px] font-mono text-faint">
-                    {planSource === "qwen" ? "by Qwen" : "demo plan"}
+                    {planSource === "qwen" ? "by Qwen" : planSource === "error" ? "API error" : "demo plan"}
                   </span>
                 </div>
-                <p className="text-sm leading-relaxed whitespace-pre-line text-[#F0EBDD]">{plan}</p>
+                <p className={`text-sm leading-relaxed whitespace-pre-line ${planSource === "error" ? "text-clay" : "text-[#F0EBDD]"}`}>{plan}</p>
               </section>
             )}
 
