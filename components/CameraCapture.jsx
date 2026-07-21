@@ -106,19 +106,19 @@ export default function CameraCapture({ onCapture, onClose }) {
             {ready && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 {/* Face guide overlay */}
-                <svg viewBox="0 0 300 300" className="w-[85%] max-w-[340px] opacity-90">
+                <svg viewBox="0 0 300 300" className="w-full max-w-[360px] opacity-90">
                   <ellipse
                     cx="150"
                     cy="140"
-                    rx="110"
-                    ry="140"
+                    rx="135"
+                    ry="170"
                     fill="none"
                     stroke="white"
-                    strokeWidth="2.5"
-                    strokeDasharray="10 6"
+                    strokeWidth="3"
+                    strokeDasharray="12 6"
                   />
-                  <line x1="150" y1="0" x2="150" y2="280" stroke="white" strokeWidth="1" opacity="0.35" />
-                  <line x1="40" y1="140" x2="260" y2="140" stroke="white" strokeWidth="1" opacity="0.35" />
+                  <line x1="150" y1="0" x2="150" y2="300" stroke="white" strokeWidth="1.2" opacity="0.4" />
+                  <line x1="15" y1="140" x2="285" y2="140" stroke="white" strokeWidth="1.2" opacity="0.4" />
                   <circle cx="150" cy="130" r="95" fill="none" stroke="white" strokeWidth="1" opacity="0.25" />
                 </svg>
               </div>
