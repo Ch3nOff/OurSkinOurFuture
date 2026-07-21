@@ -3,15 +3,6 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { Camera, X, RefreshCw, AlertCircle } from "lucide-react";
 
-/**
- * In-browser camera preview using getUserMedia — chosen over native
- * device-camera file input specifically so this works identically on
- * desktop and mobile without switching to a separate camera app.
- *
- * onCapture receives a data URL string, same shape as the file-upload
- * path produces, so the parent component doesn't need to know which
- * input method was used.
- */
 export default function CameraCapture({ onCapture, onClose }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -72,10 +63,6 @@ export default function CameraCapture({ onCapture, onClose }) {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-    // Mirror horizontally so the captured photo matches what the user
-    // saw in preview (getUserMedia video is shown mirrored by CSS below,
-    // but the raw frame is not — without this the saved photo would be
-    // flipped relative to what the user expected).
     ctx.translate(canvas.width, 0);
     ctx.scale(-1, 1);
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -94,7 +81,7 @@ export default function CameraCapture({ onCapture, onClose }) {
     <div className="rounded-3xl overflow-hidden bg-ink relative">
       <button
         onClick={handleClose}
-        className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full flex items-center justify-center bg-black/40 backdrop-blur"
+        className="absolute top-3 right-3 z-20 w-8 h-8 rounded-full flex items-center justify-center bg-black/40 backdrop-blur"
         aria-label="Close camera"
       >
         <X size={16} className="text-paper" />
@@ -107,14 +94,49 @@ export default function CameraCapture({ onCapture, onClose }) {
         </div>
       ) : (
         <>
-          <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full aspect-square object-cover"
-            style={{ transform: "scaleX(-1)" }}
-          />
+          <div className="relative">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              muted
+              className="w-full aspect-square object-cover"
+              style={{ transform: "scaleX(-1)" }}
+            />
+            {ready && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {/* Face guide overlay */}
+                <svg viewBox="0 0 300 300" className="w-3/5 max-w-[220px] opacity-70">
+                  <ellipse
+                    cx="150"
+                    cy="130"
+                    rx="72"
+                    ry="95"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeDasharray="8 5"
+                  />
+                  <line x1="150" y1="35" x2="150" y2="225" stroke="white" strokeWidth="1" opacity="0.4" />
+                  <line x1="78" y1="130" x2="222" y2="130" stroke="white" strokeWidth="1" opacity="0.4" />
+                  <circle cx="150" cy="130" r="95" fill="none" stroke="white" strokeWidth="1" opacity="0.25" />
+                </svg>
+              </div>
+            )}
+            {!ready && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <RefreshCw size={20} className="animate-spin text-paper" />
+              </div>
+            )}
+            {/* Positioning hint */}
+            {ready && (
+              <div className="absolute top-3 left-0 right-0 flex justify-center">
+                <span className="text-[11px] font-mono text-white/80 bg-black/30 backdrop-blur px-3 py-1 rounded-full">
+                  Center your face inside the outline
+                </span>
+              </div>
+            )}
+          </div>
           {ready && (
             <div className="absolute bottom-0 left-0 right-0 flex justify-center pb-5 pt-8 bg-gradient-to-t from-black/50 to-transparent">
               <button
@@ -124,11 +146,6 @@ export default function CameraCapture({ onCapture, onClose }) {
               >
                 <div className="w-12 h-12 rounded-full bg-paper border-2 border-ink" />
               </button>
-            </div>
-          )}
-          {!ready && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <RefreshCw size={20} className="animate-spin text-paper" />
             </div>
           )}
         </>

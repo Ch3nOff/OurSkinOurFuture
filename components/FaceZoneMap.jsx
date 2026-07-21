@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ZONE_LABELS, scoreColor } from "@/lib/skinAnalysis";
+import { ZONE_LABELS, scoreColor, scoreLabel, zoneExplanation } from "@/lib/skinAnalysis";
 
 const POSITIONS = {
   forehead: { cx: 150, cy: 55, r: 34 },
@@ -34,10 +34,10 @@ export default function FaceZoneMap({ zones }) {
                 cy={pos.cy}
                 r={pos.r}
                 fill={scoreColor(score)}
-                fillOpacity={isHovered ? 0.32 : 0.18}
+                fillOpacity={isHovered ? 0.35 : 0.18}
                 stroke={scoreColor(score)}
-                strokeWidth={isHovered ? 2 : 1}
-                strokeOpacity={0.6}
+                strokeWidth={isHovered ? 2.5 : 1.2}
+                strokeOpacity={0.7}
                 className="cursor-pointer transition-all duration-200"
                 onMouseEnter={() => setHoveredZone(key)}
                 onMouseLeave={() => setHoveredZone(null)}
@@ -47,9 +47,9 @@ export default function FaceZoneMap({ zones }) {
                 y={pos.cy}
                 textAnchor="middle"
                 dy="0.35em"
-                fontSize="13"
+                fontSize="12"
                 fontFamily="'IBM Plex Mono', monospace"
-                fontWeight="600"
+                fontWeight="700"
                 fill="#0F1210"
                 className="pointer-events-none select-none"
               >
@@ -59,9 +59,14 @@ export default function FaceZoneMap({ zones }) {
           );
         })}
       </svg>
-      <div className="text-center mt-1 h-4">
+      <div className="text-center mt-2 min-h-[40px]">
         {hoveredZone && (
-          <span className="text-xs font-mono tracking-wide text-muted">{ZONE_LABELS[hoveredZone]}</span>
+          <div className="inline-flex flex-col items-start text-left bg-card border border-border rounded-2xl px-3 py-2 shadow-sm">
+            <span className="text-xs font-semibold text-ink">{ZONE_LABELS[hoveredZone]}</span>
+            <span className="text-[11px] text-muted">
+              {zones[hoveredZone] ?? 0}/100 · {scoreLabel(zones[hoveredZone] ?? 0)} · {zoneExplanation(hoveredZone)}
+            </span>
+          </div>
         )}
       </div>
     </div>

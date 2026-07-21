@@ -412,6 +412,22 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </button>
             </div>
 
+            {/* Score legend */}
+            <div className="mb-5 rounded-2xl p-3 bg-card border border-border">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-2">How to read scores</div>
+              <div className="flex flex-wrap gap-3 text-[11px]">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#4A6355]" /> Low (0–30)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#C9A876]" /> Moderate (31–60)
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#B85C4A]" /> High (61–100)
+                </span>
+              </div>
+            </div>
+
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
               <FaceZoneMap zones={analysis.zones} />
