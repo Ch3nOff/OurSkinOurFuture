@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { mockSkinAnalysis } from "@/lib/skinAnalysis";
-import { analyzeWithYouCam } from "@/lib/youcam";
+import { analyzeWithYouCam, friendlyYouCamError } from "@/lib/youcam";
 
 /**
  * POST /api/analyze
@@ -46,8 +46,9 @@ export async function POST(request) {
     return NextResponse.json({ concerns, zones, masks, mock: false });
   } catch (err) {
     console.error("Analyze route error:", err.message);
+    const code = err.message?.match(/error_[a-z_]+/)?.[0];
     return NextResponse.json(
-      { error: err.message || "Analysis failed. Please try again." },
+      { error: friendlyYouCamError(code, err.message || "Analysis failed. Please try again.") },
       { status: err.status || 502 }
     );
   }
