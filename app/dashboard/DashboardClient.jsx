@@ -96,43 +96,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         setRecommendation(recData.recommendation);
         setRecSource(recData.source ?? null);
       }
-
-      setProductsLoading(true);
-      try {
-        const topSlugs = Object.entries(result.concerns || {})
-          .filter(([, s]) => typeof s === "number" && s >= 31)
-          .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-          .slice(0, 4)
-          .map(([slug]) => {
-            const map = {
-              acne: "acne-inflammation",
-              wrinkle: "fine-lines-wrinkles",
-              redness: "redness",
-              darkCircle: "dark-circles",
-              pore: "pores",
-              texture: "skin-texture",
-              spot: "hyperpigmentation",
-              moisture: "moisture",
-            };
-            return map[slug] || slug;
-          });
-
-        if (topSlugs.length > 0) {
-          console.log("Fetching products for slugs:", topSlugs);
-          const prodRes = await fetch("/api/products/recommend", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ concernSlugs: topSlugs, countryCode: "US" }),
-          });
-          const prodData = await prodRes.json();
-          console.log("Product recommendations response:", prodData);
-          setProducts(prodData.recommendations || []);
-        }
-      } catch {
-        // Products are a nice-to-have; don't block the results screen.
-      } finally {
-        setProductsLoading(false);
-      }
     } catch (err) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
@@ -174,6 +137,44 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setPlanSource(null);
     setProducts([]);
     setSaveState("idle");
+  }
+
+  async function fetchProducts() {
+    if (!analysis?.concerns) return;
+    setProductsLoading(true);
+    try {
+      const topSlugs = Object.entries(analysis.concerns || {})
+        .filter(([, s]) => typeof s === "number" && s >= 31)
+        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+        .slice(0, 4)
+        .map(([slug]) => {
+          const map = {
+            acne: "acne-inflammation",
+            wrinkle: "fine-lines-wrinkles",
+            redness: "redness",
+            darkCircle: "dark-circles",
+            pore: "pores",
+            texture: "skin-texture",
+            spot: "hyperpigmentation",
+            moisture: "moisture",
+          };
+          return map[slug] || slug;
+        });
+
+      if (topSlugs.length > 0) {
+        const prodRes = await fetch("/api/products/recommend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ concernSlugs: topSlugs, countryCode: "US" }),
+        });
+        const prodData = await prodRes.json();
+        setProducts(prodData.recommendations || []);
+      }
+    } catch {
+      // Products are a nice-to-have; don't block the results screen.
+    } finally {
+      setProductsLoading(false);
+    }
   }
 
   async function generatePlan() {
@@ -647,7 +648,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Recommended For You</div>
               {productsLoading ? (
                 <div className="text-center py-4">
-                  <span className="text-xs text-faint">Loading recommendations…</span>
+                  <span className="text-xs text-faint">Finding best products for your skin…</span>
                 </div>
               ) : products.length > 0 ? (
                 <div className="space-y-2">
@@ -680,10 +681,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-4">
-                  <p className="text-xs text-faint mb-2">Product recommendations are being set up.</p>
-                  <p className="text-[11px] text-faint">Check back soon for Sephora product suggestions matched to your scan.</p>
-                </div>
+                <button
+                  onClick={fetchProducts}
+                  className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform"
+                >
+                  <Sparkles size={15} />
+                  Check Products
+                </button>
               )}
             </section>
 
