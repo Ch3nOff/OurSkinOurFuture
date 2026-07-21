@@ -1,7 +1,35 @@
 import { NextResponse } from "next/server";
 import { mockSkinAnalysis } from "@/lib/skinAnalysis";
 import { analyzeWithYouCamFromUrl, friendlyYouCamError } from "@/lib/youcam";
-import { createClient } from "@/lib/supabase/server";
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+async function uploadToSupabase(buffer, contentType) {
+  if (!SUPABASE_URL || !SUPABASE_KEY) {
+    throw new Error("Supabase not configured");
+  }
+  const path = `scans/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const url = `${SUPABASE_URL}/storage/v1/object/scan-photos/${path}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Content-Type": contentType,
+      "x-upsert": "true",
+    },
+    body: buffer,
+  });
+
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`Supabase upload failed (${res.status}): ${t}`);
+  }
+
+  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/scan-photos/${path}`;
+  return publicUrl;
+}
 
 export async function POST(request) {
   try {
@@ -28,26 +56,7 @@ export async function POST(request) {
     // Upload to Supabase Storage so we get a public URL that YouCam can
     // download without any special headers (avoids S3 pre-signed URL
     // download failures).
-    const supabase = createClient();
-    const blob = new Blob([buffer], { type: contentType });
-    const path = `scans/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-    const { error: uploadError } = await supabase.storage
-      .from("scan-photos")
-      .upload(path, blob, { contentType, upsert: true });
-
-    if (uploadError) {
-      console.error("Supabase upload failed:", uploadError);
-      return NextResponse.json(
-        { error: `Image upload failed: ${uploadError.message}` },
-        { status: 500 }
-      );
-    }
-
-    const { data: publicData } = supabase.storage.from("scan-photos").getPublicUrl(path);
-    const publicUrl = publicData?.publicUrl;
-    if (!publicUrl) {
-      return NextResponse.json({ error: "Failed to get public image URL." }, { status: 500 });
-    }
+    const publicUrl = await uploadToSupabase(buffer, contentType);
 
     const { concerns, zones, masks, overall, skinAge, skinTypes, resizeImage } =
       await analyzeWithYouCamFromUrl(publicUrl);
