@@ -34,6 +34,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [recLoading, setRecLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
+  const [productsError, setProductsError] = useState(null);
+  const [productsSlugs, setProductsSlugs] = useState([]);
 
   const [routine, setRoutine] = useState("");
   const [prefs, setPrefs] = useState({
@@ -142,6 +144,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   async function fetchProducts() {
     if (!analysis?.concerns) return;
     setProductsLoading(true);
+    setProductsError(null);
     try {
       const topSlugs = Object.entries(analysis.concerns || {})
         .filter(([, s]) => typeof s === "number" && s >= 31)
@@ -161,6 +164,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           return map[slug] || slug;
         });
 
+      setProductsSlugs(topSlugs);
+
       if (topSlugs.length > 0) {
         const prodRes = await fetch("/api/products/recommend", {
           method: "POST",
@@ -168,10 +173,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           body: JSON.stringify({ concernSlugs: topSlugs, countryCode: "US" }),
         });
         const prodData = await prodRes.json();
+        if (prodData.error) {
+          setProductsError(prodData.error);
+        }
         setProducts(prodData.recommendations || []);
       }
-    } catch {
-      // Products are a nice-to-have; don't block the results screen.
+    } catch (err) {
+      setProductsError(err.message);
     } finally {
       setProductsLoading(false);
     }
@@ -649,6 +657,11 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               {productsLoading ? (
                 <div className="text-center py-4">
                   <span className="text-xs text-faint">Finding best products for your skin…</span>
+                  {productsSlugs.length > 0 && (
+                    <span className="text-[10px] font-mono text-faint block mt-1">
+                      Looking up: {productsSlugs.join(", ")}
+                    </span>
+                  )}
                 </div>
               ) : products.length > 0 ? (
                 <div className="space-y-2">
@@ -695,8 +708,16 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                       Check Products
                     </span>
                   </button>
-                  <p className="text-[10px] text-faint mt-3">
-                    Make sure the 3 SQL files ran in Supabase. Check Vercel logs for errors.
+                  {productsSlugs.length > 0 && (
+                    <p className="text-[10px] font-mono text-faint mt-2">
+                      Tried: {productsSlugs.join(", ")}
+                    </p>
+                  )}
+                  {productsError && (
+                    <p className="text-[10px] text-clay mt-2 break-words">{productsError}</p>
+                  )}
+                  <p className="text-[10px] text-faint mt-2">
+                    Run the 3 Supabase SQL files in order, then click Check Products again.
                   </p>
                 </div>
               )}

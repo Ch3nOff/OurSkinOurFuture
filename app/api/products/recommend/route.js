@@ -25,7 +25,10 @@ export async function POST(request) {
 
     if (error) {
       console.error("Product recommendation RPC error:", error);
-      return NextResponse.json({ recommendations: [], error: error.message }, { status: 200 });
+      return NextResponse.json({
+        recommendations: [],
+        error: `RPC error: ${error.message}`,
+      }, { status: 200 });
     }
 
     console.log("Product recommendations RPC result:", { concernSlugs, count: data?.length, sample: data?.[0] });
