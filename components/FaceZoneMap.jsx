@@ -12,54 +12,62 @@ const POSITIONS = {
   chin: { cx: 150, cy: 215, r: 26 },
 };
 
-export default function FaceZoneMap({ zones }) {
+export default function FaceZoneMap({ image, zones }) {
   const [hoveredZone, setHoveredZone] = useState(null);
 
   return (
     <div className="relative">
-      <svg viewBox="0 0 300 260" className="w-full max-w-[280px] mx-auto">
-        <path
-          d="M150 15 C 210 15, 245 60, 245 130 C 245 195, 205 245, 150 245 C 95 245, 55 195, 55 130 C 55 60, 90 15, 150 15 Z"
-          fill="#FDFBF6"
-          stroke="#D9D2BE"
-          strokeWidth="1.5"
-        />
-        {Object.entries(POSITIONS).map(([key, pos]) => {
-          const score = zones[key] ?? 0;
-          const isHovered = hoveredZone === key;
-          return (
-            <g key={key}>
-              <circle
-                cx={pos.cx}
-                cy={pos.cy}
-                r={pos.r}
-                fill={scoreColor(score)}
-                fillOpacity={isHovered ? 0.35 : 0.18}
-                stroke={scoreColor(score)}
-                strokeWidth={isHovered ? 2.5 : 1.2}
-                strokeOpacity={0.7}
-                className="cursor-pointer transition-all duration-200"
-                onMouseEnter={() => setHoveredZone(key)}
-                onMouseLeave={() => setHoveredZone(null)}
-              />
-              <text
-                x={pos.cx}
-                y={pos.cy}
-                textAnchor="middle"
-                dy="0.35em"
-                fontSize="12"
-                fontFamily="'IBM Plex Mono', monospace"
-                fontWeight="700"
-                fill="#0F1210"
-                className="pointer-events-none select-none"
-              >
-                {score}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="text-center mt-2 min-h-[40px]">
+      <div className="relative w-full max-w-[280px] mx-auto rounded-2xl overflow-hidden bg-paper border border-border">
+        {image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image}
+            alt="Scan"
+            className="w-full aspect-[4/5] object-cover"
+          />
+        )}
+        <svg
+          viewBox="0 0 300 260"
+          className="absolute inset-0 w-full h-full"
+          style={{ aspectRatio: "4/5" }}
+        >
+          {Object.entries(POSITIONS).map(([key, pos]) => {
+            const score = zones[key] ?? 0;
+            const isHovered = hoveredZone === key;
+            return (
+              <g key={key}>
+                <circle
+                  cx={pos.cx}
+                  cy={pos.cy}
+                  r={pos.r}
+                  fill={scoreColor(score)}
+                  fillOpacity={isHovered ? 0.35 : 0.2}
+                  stroke={scoreColor(score)}
+                  strokeWidth={isHovered ? 2.5 : 1.2}
+                  strokeOpacity={0.8}
+                  className="cursor-pointer transition-all duration-200"
+                  onMouseEnter={() => setHoveredZone(key)}
+                  onMouseLeave={() => setHoveredZone(null)}
+                />
+                <text
+                  x={pos.cx}
+                  y={pos.cy}
+                  textAnchor="middle"
+                  dy="0.35em"
+                  fontSize="12"
+                  fontFamily="'IBM Plex Mono', monospace"
+                  fontWeight="700"
+                  fill="#0F1210"
+                  className="pointer-events-none select-none"
+                >
+                  {score}
+                </text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+      <div className="text-center mt-2 min-h-[44px]">
         {hoveredZone && (
           <div className="inline-flex flex-col items-start text-left bg-card border border-border rounded-2xl px-3 py-2 shadow-sm">
             <span className="text-xs font-semibold text-ink">{ZONE_LABELS[hoveredZone]}</span>

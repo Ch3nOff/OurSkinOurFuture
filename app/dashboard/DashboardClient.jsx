@@ -430,7 +430,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
-              <FaceZoneMap zones={analysis.zones} />
+              <FaceZoneMap image={imagePreview} zones={analysis.zones} />
             </section>
 
             <section className="mb-4">
