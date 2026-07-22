@@ -1,9 +1,10 @@
 -- ============================================================
 -- 03_core_queries.sql — Recommendation logic + RPC
 -- Run after 01_schema.sql and 02_seed_data.sql
+-- Matches confirmed schema: UUIDs, relevance_score, is_headline_ingredient
 -- ============================================================
 
--- ---------- Drop existing functions so we can change return types ----------
+-- Drop existing functions so we can change return types
 
 drop function if exists public.get_recommendations(text[], text);
 drop function if exists public.get_top_products_per_concern(text[], text, int);
@@ -45,8 +46,8 @@ as $$
       i.slug as ingredient_slug,
       i.display_name as ingredient_label,
       i.display_name as headline_ingredient,
-      ci.rank as ingredient_rank,
-      row_number() over (partition by tc.id order by ci.rank) as rn
+      ci.relevance_score as ingredient_rank,
+      row_number() over (partition by tc.id order by ci.relevance_score desc) as rn
     from target_concerns tc
     join public.concern_ingredients ci on ci.concern_id = tc.id
     join public.ingredients i on i.id = ci.ingredient_id
@@ -69,11 +70,11 @@ as $$
       pa.local_currency,
       pa.in_stock,
       case
-        when ti.ingredient_rank = 1 then 'good'
-        when ti.ingredient_rank = 2 then 'better'
+        when ti.ingredient_rank >= 80 then 'good'
+        when ti.ingredient_rank >= 60 then 'better'
         else 'best'
       end as tier,
-      (4 - ti.ingredient_rank) * 10
+      ti.ingredient_rank
         + (case when pa.in_stock then 5 else -100 end) as match_score
     from top_ingredients ti
     join public.product_ingredients pi on pi.ingredient_id = (
@@ -83,7 +84,7 @@ as $$
     join public.brands b on b.id = p.brand_id
     left join public.product_availability pa
       on pa.product_id = p.id and pa.country_code = p_country_code
-    where pi.rank <= 2
+    where pi.is_headline_ingredient = true
   )
   select *
   from product_matches
@@ -122,7 +123,7 @@ as $$
       tc.slug as concern_slug,
       tc.concern_display_name,
       i.slug as ingredient_slug,
-      ci.rank as ing_rank
+      ci.relevance_score as ing_rank
     from concern_data tc
     join public.concern_ingredients ci on ci.concern_id = tc.id
     join public.ingredients i on i.id = ci.ingredient_id
@@ -138,8 +139,8 @@ as $$
       pa.price_local_cents,
       pa.in_stock,
       case
-        when ir.ing_rank = 1 then 'good'
-        when ir.ing_rank = 2 then 'better'
+        when ir.ing_rank >= 80 then 'good'
+        when ir.ing_rank >= 60 then 'better'
         else 'best'
       end as tier,
       row_number() over (
@@ -153,7 +154,7 @@ as $$
     join public.brands b on b.id = p.brand_id
     left join public.product_availability pa
       on pa.product_id = p.id and pa.country_code = p_country_code
-    where pi.rank <= 2
+    where pi.is_headline_ingredient = true
   )
   select concern_slug, concern_display_name, product_slug, product_name,
          brand_name, purchase_url, price_local_cents, in_stock, tier

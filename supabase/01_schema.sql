@@ -1,6 +1,12 @@
--- 01_schema.sql
+-- ============================================================
+-- 01_schema.sql — Skin Analysis → Product Recommendation DB
+-- Matches user's confirmed-live schema exactly.
+-- ============================================================
+
+-- ---------- Layer 1: Science ----------
+
 create table if not exists public.skin_concerns (
-  id bigserial primary key,
+  id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   display_name text not null,
   description text,
@@ -10,7 +16,7 @@ create table if not exists public.skin_concerns (
 );
 
 create table if not exists public.ingredients (
-  id bigserial primary key,
+  id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   display_name text not null,
   inci_name text,
@@ -22,46 +28,51 @@ create table if not exists public.ingredients (
 );
 
 create table if not exists public.concern_ingredients (
-  concern_id bigint not null references public.skin_concerns(id) on delete cascade,
-  ingredient_id bigint not null references public.ingredients(id) on delete cascade,
-  rank int not null default 0,
+  concern_id uuid not null references public.skin_concerns(id) on delete cascade,
+  ingredient_id uuid not null references public.ingredients(id) on delete cascade,
+  relevance_score int not null default 0,
   evidence_note text,
   primary key (concern_id, ingredient_id)
 );
 
+-- ---------- Layer 2: Market ----------
+
 create table if not exists public.brands (
-  id bigserial primary key,
+  id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   name text not null,
-  website text,
+  country_of_origin text,
+  price_tier text,
+  is_cruelty_free boolean default false,
+  is_vegan_friendly boolean default false,
+  website_url text,
   logo_url text,
   created_at timestamptz not null default now()
 );
 
 create table if not exists public.products (
-  id bigserial primary key,
+  id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   name text not null,
-  brand_id bigint not null references public.brands(id) on delete restrict,
+  brand_id uuid not null references public.brands(id) on delete restrict,
   product_type text,
   description text,
-  tier text check (tier in ('good','better','best')),
+  tier text check (tier in ('good','better','best','luxury','drugstore','mid')),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 
 create table if not exists public.product_ingredients (
-  product_id bigint not null references public.products(id) on delete cascade,
-  ingredient_id bigint not null references public.ingredients(id) on delete cascade,
-  concentration_pct numeric,
-  rank int not null default 0,
+  product_id uuid not null references public.products(id) on delete cascade,
+  ingredient_id uuid not null references public.ingredients(id) on delete cascade,
+  is_headline_ingredient boolean default false,
   primary key (product_id, ingredient_id)
 );
 
 create table if not exists public.product_availability (
-  id bigserial primary key,
-  product_id bigint not null references public.products(id) on delete cascade,
+  id uuid primary key default gen_random_uuid(),
+  product_id uuid not null references public.products(id) on delete cascade,
   country_code text not null,
   retailer text,
   purchase_url text,
@@ -74,11 +85,15 @@ create table if not exists public.product_availability (
   unique (product_id, country_code, retailer)
 );
 
+-- ---------- Indexes ----------
+
 create index if not exists idx_concern_ingredients_concern on public.concern_ingredients(concern_id);
 create index if not exists idx_concern_ingredients_ingredient on public.concern_ingredients(ingredient_id);
 create index if not exists idx_products_brand on public.products(brand_id);
 create index if not exists idx_product_availability_product on public.product_availability(product_id);
 create index if not exists idx_product_availability_country on public.product_availability(country_code);
+
+-- ---------- RLS ----------
 
 alter table public.skin_concerns enable row level security;
 alter table public.ingredients enable row level security;

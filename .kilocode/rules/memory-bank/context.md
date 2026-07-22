@@ -59,3 +59,4 @@ This is the **OurSkinOurFuture** skin diagnostic built for the YouCam Skin AI ha
 | 2026-07-20 (2) | Fixed Vercel build: TS deps + removed conflicting `src/` tree; wired lint/typecheck |
 | 2026-07-20 (3) | Scaffolded `/api/simulate`, wired TimelineSlider to it, updated ROADMAP/Memory Bank |
 | 2026-07-20 (4) | Wired real YouCam Skin Analysis (`lib/youcam.js`) into `/api/analyze` w/ mock fallback; added `/api/qwen` (Qwen/DashScope) personalized plan; dashboard "routine" step (current products + lifestyle prefs); browsable History panel; extended `scans` table (routine/preferences/qwen_plan) + migration; `.env.example` |
+| 2026-07-22 | Verified `app/api/products/recommend/route.js` uses `await createClient()` and `app/dashboard/DashboardClient.jsx` products rendering uses confirmed schema field names — no JS changes needed |
