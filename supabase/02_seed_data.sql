@@ -33,12 +33,24 @@ insert into public.ingredients (slug, display_name, inci_name, aliases, descript
 on conflict (slug) do nothing;
 
 -- ---------- Concern-Ingredient links ----------
--- Explicit SELECT with comma-crossjoin to avoid VALUES/subquery parser issues.
+-- Plain INSERT VALUES with hardcoded IDs to bypass SQL parser issues.
+-- If IDs differ in your DB, run: SELECT id, slug FROM skin_concerns; SELECT id, slug FROM ingredients;
 
-insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
-select c.id, i.id, 1, 'Strengthens barrier and reduces visible redness.'
-from public.skin_concerns c, public.ingredients i
-where c.slug = 'redness' and i.slug = 'niacinamide'
+insert into public.concern_ingredients (concern_id, ingredient_id, rank)
+values
+  (1, 1, 1),
+  (1, 2, 2),
+  (1, 3, 3),
+  (2, 4, 1),
+  (2, 3, 2),
+  (2, 5, 3),
+  (3, 5, 1),
+  (3, 6, 2),
+  (3, 4, 3),
+  (3, 7, 4),
+  (4, 8, 1),
+  (4, 5, 2),
+  (4, 6, 3)
 on conflict (concern_id, ingredient_id) do nothing;
 
 insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
@@ -157,238 +169,57 @@ join public.brands b on b.slug = p.brand_slug
 on conflict (slug) do nothing;
 
 -- ---------- Product-Ingredient links ----------
+-- Plain INSERT VALUES with hardcoded product IDs (1-20 based on insertion order above).
 
 insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'cerave-hydrating-cleanser' and i.slug = 'ceramides'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'cerave-moisturizing-cream' and i.slug = 'ceramides'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 2
-from public.products p, public.ingredients i
-where p.slug = 'cerave-moisturizing-cream' and i.slug = 'hyaluronic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 10, 1
-from public.products p, public.ingredients i
-where p.slug = 'cerave-vitamin-c-serum' and i.slug = 'vitamin-c'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'lrposay-cleanser' and i.slug = 'salicylic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'lrposay-cicaplast' and i.slug = 'centella-asiatica'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'lrposay-anthelios' and i.slug = 'zinc-oxide-spf'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 10, 1
-from public.products p, public.ingredients i
-where p.slug = 'ordinary-niacinamide' and i.slug = 'niacinamide'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 1, 2
-from public.products p, public.ingredients i
-where p.slug = 'ordinary-niacinamide' and i.slug = 'zinc-oxide-spf'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 30, 1
-from public.products p, public.ingredients i
-where p.slug = 'ordinary-aha-30' and i.slug = 'aha-glycolic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 2, 1
-from public.products p, public.ingredients i
-where p.slug = 'ordinary-ha' and i.slug = 'hyaluronic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 10, 1
-from public.products p, public.ingredients i
-where p.slug = 'ordinary-azelaic' and i.slug = 'azelaic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'ordinary-bakuchiol' and i.slug = 'bakuchiol'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 2, 1
-from public.products p, public.ingredients i
-where p.slug = 'paulas-choice-2pct-bha' and i.slug = 'salicylic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 8, 1
-from public.products p, public.ingredients i
-where p.slug = 'paulas-choice-8pct-aha' and i.slug = 'aha-glycolic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 15, 1
-from public.products p, public.ingredients i
-where p.slug = 'paulas-choice-c15' and i.slug = 'vitamin-c'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'cosrx-snail' and i.slug = 'centella-asiatica'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, 2, 1
-from public.products p, public.ingredients i
-where p.slug = 'cosrx-bha' and i.slug = 'salicylic-acid'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'olay-regenerist-retinol' and i.slug = 'retinol'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'neutrogena-rapid-wrinkle' and i.slug = 'retinol'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'supergoop-unseen' and i.slug = 'zinc-oxide-spf'
-on conflict (product_id, ingredient_id) do nothing;
-
-insert into public.product_ingredients (product_id, ingredient_id, concentration_pct, rank)
-select p.id, i.id, null, 1
-from public.products p, public.ingredients i
-where p.slug = 'biossance-squalane' and i.slug = 'squalane'
+values
+  (1, 11, null, 1),
+  (2, 11, null, 1),
+  (2, 10, null, 2),
+  (3, 4, 10, 1),
+  (4, 1, null, 1),
+  (5, 8, null, 1),
+  (6, 15, null, 1),
+  (7, 2, 10, 1),
+  (7, 15, 1, 2),
+  (8, 14, 30, 1),
+  (9, 10, 2, 1),
+  (10, 3, 10, 1),
+  (11, 7, null, 1),
+  (12, 1, 2, 1),
+  (13, 14, 8, 1),
+  (14, 4, 15, 1),
+  (15, 8, null, 1),
+  (16, 1, 2, 1),
+  (17, 5, null, 1),
+  (18, 5, null, 1),
+  (19, 15, null, 1),
+  (20, 9, null, 1)
 on conflict (product_id, ingredient_id) do nothing;
 
 -- ---------- Product Availability ----------
--- Individual inserts to avoid VALUES/JOIN parser issues.
+-- Plain INSERT VALUES. Product IDs are 1-20 based on insertion order above.
 
 insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/hydrating-facial-cleanser-P439009', 1499, 'USD', true, true
-from public.products p where p.slug = 'cerave-hydrating-cleanser'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/moisturizing-cream-P123456', 1699, 'USD', true, true
-from public.products p where p.slug = 'cerave-moisturizing-cream'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/skin-renewing-vitamin-c-serum', 2199, 'USD', true, true
-from public.products p where p.slug = 'cerave-vitamin-c-serum'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/effaclar-purifying-foaming-gel', 1499, 'USD', true, true
-from public.products p where p.slug = 'lrposay-cleanser'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/cicaplast-baume-b5-plus', 1399, 'USD', true, true
-from public.products p where p.slug = 'lrposay-cicaplast'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/anthelios-uvmune-400', 3600, 'USD', true, true
-from public.products p where p.slug = 'lrposay-anthelios'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/niacinamide-10-zinc-1', 680, 'USD', true, true
-from public.products p where p.slug = 'ordinary-niacinamide'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/aha-30-bha-2-peeling-solution', 960, 'USD', true, true
-from public.products p where p.slug = 'ordinary-aha-30'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/hyaluronic-acid-2-b5', 720, 'USD', true, true
-from public.products p where p.slug = 'ordinary-ha'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/azelaic-acid-suspension-10', 990, 'USD', true, true
-from public.products p where p.slug = 'ordinary-azelaic'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/bakuchiol', 1000, 'USD', true, true
-from public.products p where p.slug = 'ordinary-bakuchiol'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/2-bha-liquid-exfoliant', 3200, 'USD', true, true
-from public.products p where p.slug = 'paulas-choice-2pct-bha'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/8-aha-gel-exfoliant', 2900, 'USD', true, true
-from public.products p where p.slug = 'paulas-choice-8pct-aha'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/c15-super-booster', 4400, 'USD', true, true
-from public.products p where p.slug = 'paulas-choice-c15'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/snail-mucin-96', 1600, 'USD', true, true
-from public.products p where p.slug = 'cosrx-snail'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/bha-blackhead-power-liquid', 1700, 'USD', true, true
-from public.products p where p.slug = 'cosrx-bha'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/regenerist-retinol-24-night', 2899, 'USD', true, true
-from public.products p where p.slug = 'olay-regenerist-retinol'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/rapid-wrinkle-repair-retinol', 2199, 'USD', true, true
-from public.products p where p.slug = 'neutrogena-rapid-wrinkle'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/unseen-sunscreen-spf-40', 2200, 'USD', true, true
-from public.products p where p.slug = 'supergoop-unseen'
-on conflict (product_id, country_code, retailer) do nothing;
-
-insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', 'sephora', 'https://www.sephora.com/product/100-squalane-oil', 2400, 'USD', true, true
-from public.products p where p.slug = 'biossance-squalane'
+values
+  (1,  'US', 'sephora', 'https://www.sephora.com/product/hydrating-facial-cleanser-P439009',    1499, 'USD', true, true),
+  (2,  'US', 'sephora', 'https://www.sephora.com/product/moisturizing-cream-P123456',           1699, 'USD', true, true),
+  (3,  'US', 'sephora', 'https://www.sephora.com/product/skin-renewing-vitamin-c-serum',       2199, 'USD', true, true),
+  (4,  'US', 'sephora', 'https://www.sephora.com/product/effaclar-purifying-foaming-gel',      1499, 'USD', true, true),
+  (5,  'US', 'sephora', 'https://www.sephora.com/product/cicaplast-baume-b5-plus',            1399, 'USD', true, true),
+  (6,  'US', 'sephora', 'https://www.sephora.com/product/anthelios-uvmune-400',               3600, 'USD', true, true),
+  (7,  'US', 'sephora', 'https://www.sephora.com/product/niacinamide-10-zinc-1',                680, 'USD', true, true),
+  (8,  'US', 'sephora', 'https://www.sephora.com/product/aha-30-bha-2-peeling-solution',        960, 'USD', true, true),
+  (9,  'US', 'sephora', 'https://www.sephora.com/product/hyaluronic-acid-2-b5',                720, 'USD', true, true),
+  (10, 'US', 'sephora', 'https://www.sephora.com/product/azelaic-acid-suspension-10',          990, 'USD', true, true),
+  (11, 'US', 'sephora', 'https://www.sephora.com/product/bakuchiol',                           1000, 'USD', true, true),
+  (12, 'US', 'sephora', 'https://www.sephora.com/product/2-bha-liquid-exfoliant',             3200, 'USD', true, true),
+  (13, 'US', 'sephora', 'https://www.sephora.com/product/8-aha-gel-exfoliant',                2900, 'USD', true, true),
+  (14, 'US', 'sephora', 'https://www.sephora.com/product/c15-super-booster',                  4400, 'USD', true, true),
+  (15, 'US', 'sephora', 'https://www.sephora.com/product/snail-mucin-96',                      1600, 'USD', true, true),
+  (16, 'US', 'sephora', 'https://www.sephora.com/product/bha-blackhead-power-liquid',         1700, 'USD', true, true),
+  (17, 'US', 'sephora', 'https://www.sephora.com/product/regenerist-retinol-24-night',        2899, 'USD', true, true),
+  (18, 'US', 'sephora', 'https://www.sephora.com/product/rapid-wrinkle-repair-retinol',      2199, 'USD', true, true),
+  (19, 'US', 'sephora', 'https://www.sephora.com/product/unseen-sunscreen-spf-40',           2200, 'USD', true, true),
+  (20, 'US', 'sephora', 'https://www.sephora.com/product/100-squalane-oil',                   2400, 'USD', true, true)
 on conflict (product_id, country_code, retailer) do nothing;
