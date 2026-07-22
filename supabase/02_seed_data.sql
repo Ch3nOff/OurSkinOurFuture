@@ -35,24 +35,83 @@ on conflict (slug) do nothing;
 -- ---------- Concern-Ingredient links ----------
 
 insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
-select c.id, i.id, v.rn, v.note
-from (values
-  ('redness',                'niacinamide',         1, 'Strengthens barrier and reduces visible redness.'),
-  ('redness',                'centella-asiatica',   2, 'Cica soothes irritation and speeds barrier repair.'),
-  ('redness',                'azelaic-acid',        3, 'Reduces rosacea-associated redness and bumps.'),
-  ('hyperpigmentation',      'vitamin-c',           1, 'Inhibits melanin production — fades dark spots.'),
-  ('hyperpigmentation',      'azelaic-acid',        2, 'Blocks abnormal pigment production safely.'),
-  ('hyperpigmentation',      'retinol',             3, 'Speeds turnover so pigmented cells shed faster.'),
-  ('fine-lines-wrinkles',    'retinol',             1, 'Clinically proven to boost collagen and smooth fine lines.'),
-  ('fine-lines-wrinkles',    'peptide-complex',     2, 'Signals collagen production without retinol irritation.'),
-  ('fine-lines-wrinkles',    'vitamin-c',           3, 'Antioxidant that brightens and defends against photoaging.'),
-  ('fine-lines-wrinkles',    'bakuchiol',           4, 'Retinol-like results with less sensitivity — good for daily use.'),
-  ('skin-texture',           'aha-glycolic-acid',   1, 'Sloughs dead cells for smoother surface texture.'),
-  ('skin-texture',           'retinol',             2, 'Promotes cell renewal and collagen for refined texture.'),
-  ('skin-texture',           'peptide-complex',     3, 'Supports firm, even skin surface over time.')
-) as v(slug, islug, rn, note)
-join public.skin_concerns c on c.slug = v.slug
-join public.ingredients i on i.slug = v.islug
+select
+  (select id from public.skin_concerns where slug = 'redness'),
+  (select id from public.ingredients where slug = 'niacinamide'),
+  1,
+  'Strengthens barrier and reduces visible redness.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'redness'),
+  (select id from public.ingredients where slug = 'centella-asiatica'),
+  2,
+  'Cica soothes irritation and speeds barrier repair.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'redness'),
+  (select id from public.ingredients where slug = 'azelaic-acid'),
+  3,
+  'Reduces rosacea-associated redness and bumps.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'hyperpigmentation'),
+  (select id from public.ingredients where slug = 'vitamin-c'),
+  1,
+  'Inhibits melanin production — fades dark spots.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'hyperpigmentation'),
+  (select id from public.ingredients where slug = 'azelaic-acid'),
+  2,
+  'Blocks abnormal pigment production safely.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'hyperpigmentation'),
+  (select id from public.ingredients where slug = 'retinol'),
+  3,
+  'Speeds turnover so pigmented cells shed faster.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
+  (select id from public.ingredients where slug = 'retinol'),
+  1,
+  'Clinically proven to boost collagen and smooth fine lines.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
+  (select id from public.ingredients where slug = 'peptide-complex'),
+  2,
+  'Signals collagen production without retinol irritation.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
+  (select id from public.ingredients where slug = 'vitamin-c'),
+  3,
+  'Antioxidant that brightens and defends against photoaging.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
+  (select id from public.ingredients where slug = 'bakuchiol'),
+  4,
+  'Retinol-like results with less sensitivity — good for daily use.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'skin-texture'),
+  (select id from public.ingredients where slug = 'aha-glycolic-acid'),
+  1,
+  'Sloughs dead cells for smoother surface texture.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'skin-texture'),
+  (select id from public.ingredients where slug = 'retinol'),
+  2,
+  'Promotes cell renewal and collagen for refined texture.'
+union all
+select
+  (select id from public.skin_concerns where slug = 'skin-texture'),
+  (select id from public.ingredients where slug = 'peptide-complex'),
+  3,
+  'Supports firm, even skin surface over time.'
 on conflict (concern_id, ingredient_id) do nothing;
 
 -- ---------- Brands ----------
@@ -133,28 +192,28 @@ on conflict (product_id, ingredient_id) do nothing;
 -- ---------- Product Availability ----------
 
 insert into public.product_availability (product_id, country_code, retailer, purchase_url, price_local_cents, local_currency, is_regulatory_approved, in_stock)
-select p.id, 'US', v.retailer, v.url, v.cents, 'USD', true, true
+select p.id, v.country_code, v.retailer, v.url, v.cents, 'USD', true, true
 from (values
-  ('cerave-hydrating-cleanser',   'sephora', 'https://www.sephora.com/product/hydrating-facial-cleanser-P439009',    1499),
-  ('cerave-moisturizing-cream',   'sephora', 'https://www.sephora.com/product/moisturizing-cream-P123456',           1699),
-  ('cerave-vitamin-c-serum',      'sephora', 'https://www.sephora.com/product/skin-renewing-vitamin-c-serum',       2199),
-  ('lrposay-cleanser',            'sephora', 'https://www.sephora.com/product/effaclar-purifying-foaming-gel',      1499),
-  ('lrposay-cicaplast',           'sephora', 'https://www.sephora.com/product/cicaplast-baume-b5-plus',            1399),
-  ('lrposay-anthelios',           'sephora', 'https://www.sephora.com/product/anthelios-uvmune-400',               3600),
-  ('ordinary-niacinamide',        'sephora', 'https://www.sephora.com/product/niacinamide-10-zinc-1',                680),
-  ('ordinary-aha-30',             'sephora', 'https://www.sephora.com/product/aha-30-bha-2-peeling-solution',        960),
-  ('ordinary-ha',                 'sephora', 'https://www.sephora.com/product/hyaluronic-acid-2-b5',                720),
-  ('ordinary-azelaic',            'sephora', 'https://www.sephora.com/product/azelaic-acid-suspension-10',          990),
-  ('ordinary-bakuchiol',          'sephora', 'https://www.sephora.com/product/bakuchiol',                           1000),
-  ('paulas-choice-2pct-bha',      'sephora', 'https://www.sephora.com/product/2-bha-liquid-exfoliant',             3200),
-  ('paulas-choice-8pct-aha',      'sephora', 'https://www.sephora.com/product/8-aha-gel-exfoliant',                2900),
-  ('paulas-choice-c15',           'sephora', 'https://www.sephora.com/product/c15-super-booster',                  4400),
-  ('cosrx-snail',                 'sephora', 'https://www.sephora.com/product/snail-mucin-96',                      1600),
-  ('cosrx-bha',                   'sephora', 'https://www.sephora.com/product/bha-blackhead-power-liquid',         1700),
-  ('olay-regenerist-retinol',     'sephora', 'https://www.sephora.com/product/regenerist-retinol-24-night',        2899),
-  ('neutrogena-rapid-wrinkle',    'sephora', 'https://www.sephora.com/product/rapid-wrinkle-repair-retinol',      2199),
-  ('supergoop-unseen',            'sephora', 'https://www.sephora.com/product/unseen-sunscreen-spf-40',           2200),
-  ('biossance-squalane',          'sephora', 'https://www.sephora.com/product/100-squalane-oil',                   2400)
-) as v(slug, retailer, url, cents)
+  ('cerave-hydrating-cleanser',   'US', 'sephora', 'https://www.sephora.com/product/hydrating-facial-cleanser-P439009',    1499),
+  ('cerave-moisturizing-cream',   'US', 'sephora', 'https://www.sephora.com/product/moisturizing-cream-P123456',           1699),
+  ('cerave-vitamin-c-serum',      'US', 'sephora', 'https://www.sephora.com/product/skin-renewing-vitamin-c-serum',       2199),
+  ('lrposay-cleanser',            'US', 'sephora', 'https://www.sephora.com/product/effaclar-purifying-foaming-gel',      1499),
+  ('lrposay-cicaplast',           'US', 'sephora', 'https://www.sephora.com/product/cicaplast-baume-b5-plus',            1399),
+  ('lrposay-anthelios',           'US', 'sephora', 'https://www.sephora.com/product/anthelios-uvmune-400',               3600),
+  ('ordinary-niacinamide',        'US', 'sephora', 'https://www.sephora.com/product/niacinamide-10-zinc-1',                680),
+  ('ordinary-aha-30',             'US', 'sephora', 'https://www.sephora.com/product/aha-30-bha-2-peeling-solution',        960),
+  ('ordinary-ha',                 'US', 'sephora', 'https://www.sephora.com/product/hyaluronic-acid-2-b5',                720),
+  ('ordinary-azelaic',            'US', 'sephora', 'https://www.sephora.com/product/azelaic-acid-suspension-10',          990),
+  ('ordinary-bakuchiol',          'US', 'sephora', 'https://www.sephora.com/product/bakuchiol',                           1000),
+  ('paulas-choice-2pct-bha',      'US', 'sephora', 'https://www.sephora.com/product/2-bha-liquid-exfoliant',             3200),
+  ('paulas-choice-8pct-aha',      'US', 'sephora', 'https://www.sephora.com/product/8-aha-gel-exfoliant',                2900),
+  ('paulas-choice-c15',           'US', 'sephora', 'https://www.sephora.com/product/c15-super-booster',                  4400),
+  ('cosrx-snail',                 'US', 'sephora', 'https://www.sephora.com/product/snail-mucin-96',                      1600),
+  ('cosrx-bha',                   'US', 'sephora', 'https://www.sephora.com/product/bha-blackhead-power-liquid',         1700),
+  ('olay-regenerist-retinol',     'US', 'sephora', 'https://www.sephora.com/product/regenerist-retinol-24-night',        2899),
+  ('neutrogena-rapid-wrinkle',    'US', 'sephora', 'https://www.sephora.com/product/rapid-wrinkle-repair-retinol',      2199),
+  ('supergoop-unseen',            'US', 'sephora', 'https://www.sephora.com/product/unseen-sunscreen-spf-40',           2200),
+  ('biossance-squalane',          'US', 'sephora', 'https://www.sephora.com/product/100-squalane-oil',                   2400)
+) as v(slug, country_code, retailer, url, cents)
 join public.products p on p.slug = v.slug
 on conflict (product_id, country_code, retailer) do nothing;
