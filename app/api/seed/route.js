@@ -181,8 +181,9 @@ export async function POST(request) {
   try {
     const body = await request.json().catch(() => ({}));
     const confirm = body.confirm;
-    if (confirm !== "SEED_DB") {
-      return NextResponse.json({ error: "Set confirm: 'SEED_DB' in the request body to enable seeding." }, { status: 400 });
+    const secret = process.env.SEED_SECRET;
+    if (!secret || confirm !== secret) {
+      return NextResponse.json({ error: "Unauthorized. Set SEED_SECRET in Vercel env vars." }, { status: 401 });
     }
 
     const supabase = await createClient();
