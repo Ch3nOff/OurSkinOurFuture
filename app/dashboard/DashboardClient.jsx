@@ -15,6 +15,7 @@ import {
   History,
   ClipboardList,
   HeartPulse,
+  Shirt,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP } from "@/lib/skinAnalysis";
@@ -36,6 +37,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState(null);
   const [productsSlugs, setProductsSlugs] = useState([]);
+
+  const [tryOnResult, setTryOnResult] = useState(null);
+  const [tryOnLoading, setTryOnLoading] = useState(false);
+  const [tryOnError, setTryOnError] = useState(null);
 
   const [routine, setRoutine] = useState("");
   const [prefs, setPrefs] = useState({
@@ -122,6 +127,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setPlan(null);
     setPlanSource(null);
     setProducts([]);
+    setTryOnResult(null);
+    setTryOnLoading(false);
+    setTryOnError(null);
     setSaveState("idle");
   }
 
@@ -662,6 +670,82 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Treatment Simulation</div>
               <TimelineSlider image={imagePreview} baselineConcerns={analysis.concerns} totalWeeks={12} />
+            </section>
+
+            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
+              <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Style Try-On</div>
+              {!tryOnResult ? (
+                <button
+                  onClick={async () => {
+                    setTryOnLoading(true);
+                    setTryOnError(null);
+                    try {
+                      const res = await fetch("/api/try-on", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          image: imagePreview,
+                          skinTone: analysis?.skinTypes?.[0]?.skinType === "Oily" ? "warm" : "neutral",
+                          style: "casual",
+                          season: "all",
+                        }),
+                      });
+                      const data = await res.json();
+                      if (data.error) {
+                        setTryOnError(data.error);
+                      } else {
+                        setTryOnResult(data);
+                      }
+                    } catch (err) {
+                      setTryOnError(err.message || "Try-on failed");
+                    } finally {
+                      setTryOnLoading(false);
+                    }
+                  }}
+                  disabled={!imagePreview || tryOnLoading}
+                  className="w-full rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {tryOnLoading ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Shirt size={14} />
+                  )}
+                  {tryOnLoading ? "Styling..." : "Try Outfits on You"}
+                </button>
+              ) : (
+                <div className="space-y-3">
+                  <div className="rounded-2xl overflow-hidden border border-border bg-paper">
+                    {tryOnResult.tryOnImage ? (
+                      <img src={tryOnResult.tryOnImage} alt="Try-on result" className="w-full aspect-[3/4] object-contain" style={{ background: "#FDFBF6" }} />
+                    ) : (
+                      <div className="aspect-[3/4] flex items-center justify-center text-[11px] text-faint">No try-on image returned</div>
+                    )}
+                  </div>
+                  {tryOnResult.recommendation && (
+                    <div className="rounded-2xl p-3 bg-paper border border-border">
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Recommended Palette</div>
+                      <div className="flex gap-1.5 mb-2">
+                        {tryOnResult.recommendation.palette?.map((hex, i) => (
+                          <span key={i} className="w-6 h-6 rounded-full border border-border" style={{ background: hex }} title={hex} />
+                        ))}
+                      </div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Key Pieces</div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {tryOnResult.recommendation.pieces?.map((piece, i) => (
+                          <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">{piece}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => { setTryOnResult(null); setTryOnError(null); }}
+                    className="w-full rounded-2xl py-2.5 text-xs font-semibold bg-paper text-ink border border-border active:scale-[0.98] transition-transform"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+              {tryOnError && <p className="text-[11px] text-clay mt-2">{tryOnError}</p>}
             </section>
 
             <div className="mb-4">
