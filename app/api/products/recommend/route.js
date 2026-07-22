@@ -17,7 +17,7 @@ export async function POST(request) {
       return NextResponse.json({ recommendations: [] });
     }
 
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data, error } = await supabase.rpc("get_recommendations", {
       p_concern_slugs: concernSlugs,
       p_country_code: countryCode,
