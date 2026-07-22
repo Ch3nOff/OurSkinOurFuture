@@ -1,8 +1,4 @@
--- ============================================================
--- 01_schema.sql — Skin Analysis → Product Recommendation DB
--- Matches user's existing schema columns.
--- ============================================================
-
+-- 01_schema.sql
 create table if not exists public.skin_concerns (
   id bigserial primary key,
   slug text not null unique,
