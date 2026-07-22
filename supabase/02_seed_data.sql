@@ -33,85 +33,123 @@ insert into public.ingredients (slug, display_name, inci_name, aliases, descript
 on conflict (slug) do nothing;
 
 -- ---------- Concern-Ingredient links ----------
+-- Using INSERT ... VALUES with scalar subqueries to avoid JOIN syntax issues.
 
 insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
-select
+values (
   (select id from public.skin_concerns where slug = 'redness'),
   (select id from public.ingredients where slug = 'niacinamide'),
   1,
   'Strengthens barrier and reduces visible redness.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'redness'),
   (select id from public.ingredients where slug = 'centella-asiatica'),
   2,
   'Cica soothes irritation and speeds barrier repair.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'redness'),
   (select id from public.ingredients where slug = 'azelaic-acid'),
   3,
   'Reduces rosacea-associated redness and bumps.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'hyperpigmentation'),
   (select id from public.ingredients where slug = 'vitamin-c'),
   1,
   'Inhibits melanin production — fades dark spots.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'hyperpigmentation'),
   (select id from public.ingredients where slug = 'azelaic-acid'),
   2,
   'Blocks abnormal pigment production safely.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'hyperpigmentation'),
   (select id from public.ingredients where slug = 'retinol'),
   3,
   'Speeds turnover so pigmented cells shed faster.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
   (select id from public.ingredients where slug = 'retinol'),
   1,
   'Clinically proven to boost collagen and smooth fine lines.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
   (select id from public.ingredients where slug = 'peptide-complex'),
   2,
   'Signals collagen production without retinol irritation.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
   (select id from public.ingredients where slug = 'vitamin-c'),
   3,
   'Antioxidant that brightens and defends against photoaging.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'fine-lines-wrinkles'),
   (select id from public.ingredients where slug = 'bakuchiol'),
   4,
   'Retinol-like results with less sensitivity — good for daily use.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'skin-texture'),
   (select id from public.ingredients where slug = 'aha-glycolic-acid'),
   1,
   'Sloughs dead cells for smoother surface texture.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'skin-texture'),
   (select id from public.ingredients where slug = 'retinol'),
   2,
   'Promotes cell renewal and collagen for refined texture.'
-union all
-select
+)
+on conflict (concern_id, ingredient_id) do nothing;
+
+insert into public.concern_ingredients (concern_id, ingredient_id, rank, evidence_note)
+values (
   (select id from public.skin_concerns where slug = 'skin-texture'),
   (select id from public.ingredients where slug = 'peptide-complex'),
   3,
   'Supports firm, even skin surface over time.'
+)
 on conflict (concern_id, ingredient_id) do nothing;
 
 -- ---------- Brands ----------
