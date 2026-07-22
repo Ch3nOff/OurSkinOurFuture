@@ -15,7 +15,6 @@ import {
   History,
   ClipboardList,
   HeartPulse,
-  Shirt,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP } from "@/lib/skinAnalysis";
@@ -24,6 +23,7 @@ import IngredientCard from "@/components/IngredientCard";
 import TimelineSlider from "@/components/TimelineSlider";
 import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
+import { detectPhotoType } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
   const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results | routine
@@ -54,12 +54,15 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [planLoading, setPlanLoading] = useState(false);
   const [planSource, setPlanSource] = useState(null);
 
+  const [progressReview, setProgressReview] = useState(null);
+  const [progressLoading, setProgressLoading] = useState(false);
+
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
   const [showHistory, setShowHistory] = useState(false);
+  const [photoType, setPhotoType] = useState(null);
   const fileInputRef = useRef(null);
-  const [uploadMode, setUploadMode] = useState("face"); // 'face' | 'full'
 
   const supabase = createClient();
 
@@ -76,18 +79,30 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setImagePreview(dataUrl);
     setAnalysisError(null);
     setStage("analyzing");
+    setPhotoType(null);
 
     try {
-      const analyzeRes = await fetch("/api/analyze", {
+      const detected = await detectPhotoType(dataUrl);
+      setPhotoType(detected);
+
+      let faceImage = dataUrl;
+      try {
+        faceImage = await cropToFaceZone(dataUrl);
+      } catch (e) {
+        console.warn("Face crop failed, using full image:", e);
+      }
+
+      const res = await fetch("/api/analyze-and-style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl, seed }),
+        body: JSON.stringify({ image: dataUrl, faceImage, seed, style: "casual", season: "all", userId: user?.id }),
       });
-      const result = await analyzeRes.json();
-      if (!analyzeRes.ok || result.error) {
+      const result = await res.json();
+      if (!res.ok || result.error) {
         throw new Error(result.error || "Analysis failed");
       }
-      setAnalysis(result);
+      setAnalysis(result.analysis);
+      setTryOnResult(result.tryOnImage ? { tryOnImage: result.tryOnImage, recommendation: result.recommendation, mock: result.mock } : null);
       setStage("results");
     } catch (err) {
       console.error("Analysis flow failed:", err);
@@ -121,16 +136,24 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setStage("capture");
     setImagePreview(null);
     setAnalysis(null);
+    setAnalysisError(null);
     setRecommendation(null);
     setRecommendationLoading(false);
+    setRecSource(null);
+    setProducts([]);
+    setProductsLoading(false);
+    setProductsError(null);
+    setProductsSlugs([]);
+    setTryOnResult(null);
+    setTryOnLoading(false);
+    setTryOnError(null);
+    setPhotoType(null);
+    setProgressReview(null);
+    setProgressLoading(false);
     setRoutine("");
     setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
     setPlan(null);
     setPlanSource(null);
-    setProducts([]);
-    setTryOnResult(null);
-    setTryOnLoading(false);
-    setTryOnError(null);
     setSaveState("idle");
   }
 
@@ -203,6 +226,31 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setPlanSource("error");
     } finally {
       setPlanLoading(false);
+    }
+  }
+
+  async function fetchProgressReview() {
+    if (!user) {
+      window.location.href = "/auth";
+      return;
+    }
+    setProgressLoading(true);
+    try {
+      const res = await fetch("/api/progress-review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setProgressReview(`Review unavailable: ${data.error}`);
+      } else {
+        setProgressReview(data.review);
+      }
+    } catch (err) {
+      setProgressReview(`Review unavailable: ${err.message || "Failed to generate review."}`);
+    } finally {
+      setProgressLoading(false);
     }
   }
 
@@ -461,7 +509,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             )}
             <Loader2 size={24} className="animate-spin mb-3 text-sage" />
             <p className="text-sm font-medium text-ink">Analyzing skin condition...</p>
-            <p className="text-xs mt-1 text-faint">Checking 8 indicators across 6 facial zones</p>
+            {photoType && (
+              <p className="text-[11px] mt-1 text-faint italic">{photoType.reason}</p>
+            )}
+            <p className="text-[11px] mt-1 text-faint">Checking 8 indicators across 6 facial zones</p>
           </div>
         )}
 
@@ -674,46 +725,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             </section>
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Style Try-On</div>
-              {!tryOnResult ? (
-                <button
-                  onClick={async () => {
-                    setTryOnLoading(true);
-                    setTryOnError(null);
-                    try {
-                      const res = await fetch("/api/try-on", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          image: imagePreview,
-                          skinTone: analysis?.skinTypes?.[0]?.skinType === "Oily" ? "warm" : "neutral",
-                          style: "casual",
-                          season: "all",
-                        }),
-                      });
-                      const data = await res.json();
-                      if (data.error) {
-                        setTryOnError(data.error);
-                      } else {
-                        setTryOnResult(data);
-                      }
-                    } catch (err) {
-                      setTryOnError(err.message || "Try-on failed");
-                    } finally {
-                      setTryOnLoading(false);
-                    }
-                  }}
-                  disabled={!imagePreview || tryOnLoading}
-                  className="w-full rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {tryOnLoading ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Shirt size={14} />
-                  )}
-                  {tryOnLoading ? "Styling..." : "Try Outfits on You"}
-                </button>
-              ) : (
+              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Style Try-On</div>
+              {tryOnResult ? (
                 <div className="space-y-3">
                   <div className="rounded-2xl overflow-hidden border border-border bg-paper relative">
                     {tryOnResult.tryOnImage ? (
@@ -743,15 +756,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                       </div>
                     </div>
                   )}
-                  <button
-                    onClick={() => { setTryOnResult(null); setTryOnError(null); }}
-                    className="w-full rounded-2xl py-2.5 text-xs font-semibold bg-paper text-ink border border-border active:scale-[0.98] transition-transform"
-                  >
-                    Clear
-                  </button>
                 </div>
+              ) : (
+                <div className="text-center py-6 text-faint text-xs">Try-on will appear here after your scan</div>
               )}
-              {tryOnError && <p className="text-[11px] text-clay mt-2">{tryOnError}</p>}
             </section>
 
             <div className="mb-4">
@@ -760,6 +768,36 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 history={history}
               />
             </div>
+
+            {user && (
+              <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
+                <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Progress Review</div>
+                {!progressReview ? (
+                  <button
+                    onClick={fetchProgressReview}
+                    disabled={progressLoading}
+                    className="w-full rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {progressLoading ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={14} />
+                    )}
+                    {progressLoading ? "Analyzing your progress..." : "Get my progress review (last 30 days)"}
+                  </button>
+                ) : (
+                  <div className="rounded-2xl p-4 bg-paper border border-border">
+                    <p className="text-sm leading-relaxed text-ink whitespace-pre-line">{progressReview}</p>
+                    <button
+                      onClick={() => setProgressReview(null)}
+                      className="mt-3 text-[11px] font-medium text-muted hover:text-ink transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
 
             {/* Product Recommendations from Supabase */}
             <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
