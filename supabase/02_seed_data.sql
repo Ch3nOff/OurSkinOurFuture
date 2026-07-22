@@ -155,26 +155,26 @@ on conflict (product_id, ingredient_id) do nothing;
 insert into public.product_availability (product_id, country_code, in_stock, price, currency, url)
 select p.id, 'US', true, v.price, 'USD', v.url
 from (values
-  ('cerave-hydrating-cleanser',       14.99),
-  ('cerave-moisturizing-cream',       16.99),
-  ('cerave-vitamin-c-serum',          21.99),
-  ('lrposay-cleanser',                14.99),
-  ('lrposay-cicaplast',               13.99),
-  ('lrposay-anthelios',               36.00),
-  ('ordinary-niacinamide',             6.80),
-  ('ordinary-aha-30',                  9.60),
-  ('ordinary-ha',                      7.20),
-  ('ordinary-azelaic',                 9.90),
-  ('ordinary-bakuchiol',              10.00),
-  ('paulas-choice-2pct-bha',          32.00),
-  ('paulas-choice-8pct-aha',          29.00),
-  ('paulas-choice-c15',               44.00),
-  ('cosrx-snail',                     16.00),
-  ('cosrx-bha',                       17.00),
-  ('olay-regenerist-retinol',         28.99),
-  ('neutrogena-rapid-wrinkle',        21.99),
-  ('supergoop-unseen',                22.00),
-  ('biossance-squalane',               24.00)
-) as v(slug, price)
+  ('cerave-hydrating-cleanser',       14.99, 'https://www.sephora.com/product/hydrating-facial-cleanser-P439009'),
+  ('cerave-moisturizing-cream',       16.99, 'https://www.sephora.com/product/moisturizing-cream-P123456'),
+  ('cerave-vitamin-c-serum',          21.99, 'https://www.sephora.com/product/skin-renewing-vitamin-c-serum'),
+  ('lrposay-cleanser',                14.99, 'https://www.sephora.com/product/effaclar-purifying-foaming-gel'),
+  ('lrposay-cicaplast',               13.99, 'https://www.sephora.com/product/cicaplast-baume-b5-plus'),
+  ('lrposay-anthelios',               36.00, 'https://www.sephora.com/product/anthelios-uvmune-400'),
+  ('ordinary-niacinamide',             6.80, 'https://www.sephora.com/product/niacinamide-10-zinc-1'),
+  ('ordinary-aha-30',                  9.60, 'https://www.sephora.com/product/aha-30-bha-2-peeling-solution'),
+  ('ordinary-ha',                      7.20, 'https://www.sephora.com/product/hyaluronic-acid-2-b5'),
+  ('ordinary-azelaic',                 9.90, 'https://www.sephora.com/product/azelaic-acid-suspension-10'),
+  ('ordinary-bakuchiol',              10.00, 'https://www.sephora.com/product/bakuchiol'),
+  ('paulas-choice-2pct-bha',          32.00, 'https://www.sephora.com/product/2-bha-liquid-exfoliant'),
+  ('paulas-choice-8pct-aha',          29.00, 'https://www.sephora.com/product/8-aha-gel-exfoliant'),
+  ('paulas-choice-c15',               44.00, 'https://www.sephora.com/product/c15-super-booster'),
+  ('cosrx-snail',                     16.00, 'https://www.sephora.com/product/snail-mucin-96'),
+  ('cosrx-bha',                       17.00, 'https://www.sephora.com/product/bha-blackhead-power-liquid'),
+  ('olay-regenerist-retinol',         28.99, 'https://www.sephora.com/product/regenerist-retinol-24-night'),
+  ('neutrogena-rapid-wrinkle',        21.99, 'https://www.sephora.com/product/rapid-wrinkle-repair-retinol'),
+  ('supergoop-unseen',                22.00, 'https://www.sephora.com/product/unseen-sunscreen-spf-40'),
+  ('biossance-squalane',               24.00, 'https://www.sephora.com/product/100-squalane-oil')
+) as v(slug, price, url)
 join public.products p on p.slug = v.slug
 on conflict (product_id, country_code) do nothing;

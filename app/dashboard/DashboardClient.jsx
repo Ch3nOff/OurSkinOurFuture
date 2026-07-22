@@ -683,19 +683,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     </span>
                   )}
                 </div>
-              ) : products.length > 0 ? (
+                ) : products.length > 0 ? (
                 <div className="space-y-2">
                   {products.map((prod, i) => (
                     <a
                       key={i}
-                      href={prod.purchase_url}
+                      href={prod.purchase_url || prod.product_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center justify-between rounded-2xl p-3 bg-paper border border-border hover:border-gold transition-colors"
                     >
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-ink truncate">{prod.product_name}</div>
-                        <div className="text-[11px] text-muted">{prod.brand_name} · {prod.concern_display_name}</div>
+                        <div className="text-[11px] text-muted">{prod.brand_name} · {prod.concern_display_name || prod.concern_label}</div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
                             {prod.tier}
@@ -703,12 +703,20 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                           {prod.headline_ingredient && (
                             <span className="text-[10px] text-muted">{prod.headline_ingredient}</span>
                           )}
+                          {prod.ingredient_label && !prod.headline_ingredient && (
+                            <span className="text-[10px] text-muted">{prod.ingredient_label}</span>
+                          )}
                         </div>
                       </div>
                       <div className="text-right shrink-0 ml-3">
                         {prod.price_local_cents != null && (
                           <span className="text-sm font-semibold text-ink">
                             {(prod.price_local_cents / 100).toFixed(2)} {prod.local_currency || ""}
+                          </span>
+                        )}
+                        {prod.price != null && prod.price_local_cents == null && (
+                          <span className="text-sm font-semibold text-ink">
+                            {Number(prod.price).toFixed(2)} {prod.currency || "USD"}
                           </span>
                         )}
                         <ChevronRight size={14} className="ml-1 text-faint" />
