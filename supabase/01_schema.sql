@@ -1,28 +1,27 @@
 -- ============================================================
 -- 01_schema.sql — Skin Analysis → Product Recommendation DB
--- Run once in Supabase SQL Editor.
+-- Matches user's existing schema columns.
 -- ============================================================
-
--- ---------- Layer 1: Science (rarely changes) ----------
 
 create table if not exists public.skin_concerns (
   id bigserial primary key,
   slug text not null unique,
-  label text not null,
+  display_name text not null,
   description text,
   source_api_key text,
-  severity_label text,
-  severity_min int default 0,
-  severity_max int default 100,
+  display_order int default 0,
   created_at timestamptz not null default now()
 );
 
 create table if not exists public.ingredients (
   id bigserial primary key,
   slug text not null unique,
-  label text not null,
+  display_name text not null,
+  inci_name text,
+  aliases text[],
   description text,
-  example_products text,
+  caution_note text,
+  pregnancy_safe boolean default true,
   created_at timestamptz not null default now()
 );
 
@@ -33,8 +32,6 @@ create table if not exists public.concern_ingredients (
   evidence_note text,
   primary key (concern_id, ingredient_id)
 );
-
--- ---------- Layer 2: Market (changes often) ----------
 
 create table if not exists public.brands (
   id bigserial primary key,
@@ -50,12 +47,9 @@ create table if not exists public.products (
   slug text not null unique,
   name text not null,
   brand_id bigint not null references public.brands(id) on delete restrict,
-  category text not null,
-  subtype text,
-  url text not null,
-  image_url text,
-  country text default 'US',
-  affiliate_tag text,
+  product_type text,
+  description text,
+  tier text check (tier in ('good','better','best')),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -73,27 +67,23 @@ create table if not exists public.product_availability (
   id bigserial primary key,
   product_id bigint not null references public.products(id) on delete cascade,
   country_code text not null,
-  in_stock boolean not null default true,
-  price numeric,
-  currency text default 'USD',
-  url text,
+  retailer text,
+  purchase_url text,
+  price_local_cents int,
+  local_currency text default 'USD',
   is_regulatory_approved boolean not null default true,
-  regulatory_note text,
+  in_stock boolean not null default true,
   last_checked_at timestamptz,
   created_at timestamptz not null default now(),
-  unique (product_id, country_code)
+  unique (product_id, country_code, retailer)
 );
-
--- ---------- Indexes ----------
 
 create index if not exists idx_concern_ingredients_concern on public.concern_ingredients(concern_id);
 create index if not exists idx_concern_ingredients_ingredient on public.concern_ingredients(ingredient_id);
 create index if not exists idx_products_brand on public.products(brand_id);
-create index if not exists idx_products_category on public.products(category);
 create index if not exists idx_product_availability_product on public.product_availability(product_id);
 create index if not exists idx_product_availability_country on public.product_availability(country_code);
 
--- Enable RLS (policies in 03_core_queries.sql)
 alter table public.skin_concerns enable row level security;
 alter table public.ingredients enable row level security;
 alter table public.concern_ingredients enable row level security;

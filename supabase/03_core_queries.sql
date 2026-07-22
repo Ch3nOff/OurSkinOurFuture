@@ -3,12 +3,12 @@
 -- Run after 01_schema.sql and 02_seed_data.sql
 -- ============================================================
 
--- ---------- Reusable RPC: get_recommendations ----------
--- Call from frontend:
---   const { data } = await supabase.rpc('get_recommendations', {
---     p_concern_slugs: ['redness','hyperpigmentation'],
---     p_country_code: 'US'
---   });
+-- ---------- Drop existing functions so we can change return types ----------
+
+drop function if exists public.get_recommendations(text[], text);
+drop function if exists public.get_top_products_per_concern(text[], text, int);
+
+-- ---------- RPC: get_recommendations ----------
 
 create or replace function public.get_recommendations(
   p_concern_slugs text[],
@@ -34,7 +34,7 @@ language sql
 stable
 as $$
   with target_concerns as (
-    select id, slug, label as concern_display_name
+    select id, slug, display_name as concern_display_name
     from public.skin_concerns
     where slug = any(p_concern_slugs)
   ),
@@ -43,8 +43,8 @@ as $$
       tc.slug as concern_slug,
       tc.concern_display_name,
       i.slug as ingredient_slug,
-      i.label as ingredient_label,
-      i.label as headline_ingredient,
+      i.display_name as ingredient_label,
+      i.display_name as headline_ingredient,
       ci.rank as ingredient_rank,
       row_number() over (partition by tc.id order by ci.rank) as rn
     from target_concerns tc
@@ -64,9 +64,9 @@ as $$
       p.slug as product_slug,
       p.name as product_name,
       b.name as brand_name,
-      pa.url as purchase_url,
-      (pa.price * 100)::int as price_local_cents,
-      pa.currency as local_currency,
+      pa.purchase_url,
+      pa.price_local_cents,
+      pa.local_currency,
       pa.in_stock,
       case
         when ti.ingredient_rank = 1 then 'good'
@@ -91,7 +91,7 @@ as $$
   order by concern_slug, tier, match_score desc;
 $$;
 
--- ---------- Convenience: top products per concern for a country ----------
+-- ---------- RPC: get_top_products_per_concern ----------
 
 create or replace function public.get_top_products_per_concern(
   p_concern_slugs text[],
@@ -113,7 +113,7 @@ language sql
 stable
 as $$
   with concern_data as (
-    select id, slug, label as concern_display_name
+    select id, slug, display_name as concern_display_name
     from public.skin_concerns
     where slug = any(p_concern_slugs)
   ),
@@ -134,8 +134,8 @@ as $$
       p.slug as product_slug,
       p.name as product_name,
       b.name as brand_name,
-      pa.url as purchase_url,
-      (pa.price * 100)::int as price_local_cents,
+      pa.purchase_url,
+      pa.price_local_cents,
       pa.in_stock,
       case
         when ir.ing_rank = 1 then 'good'
@@ -144,7 +144,7 @@ as $$
       end as tier,
       row_number() over (
         partition by ir.concern_slug, ir.ing_rank
-        order by pa.in_stock desc, pa.price asc nulls last
+        order by pa.in_stock desc, pa.price_local_cents asc nulls last
       ) as rn
     from ingredient_rank ir
     join public.product_ingredients pi
@@ -162,7 +162,7 @@ as $$
   order by concern_slug, tier, in_stock desc, price_local_cents asc;
 $$;
 
--- ---------- Grant execute to anon + authenticated ----------
+-- ---------- Grant execute ----------
 
 grant execute on function public.get_recommendations(text[], text) to anon, authenticated;
 grant execute on function public.get_top_products_per_concern(text[], text, int) to anon, authenticated;
