@@ -714,22 +714,27 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 </button>
               ) : (
                 <div className="space-y-3">
-                  <div className="rounded-2xl overflow-hidden border border-border bg-paper">
+                  <div className="rounded-2xl overflow-hidden border border-border bg-paper relative">
                     {tryOnResult.tryOnImage ? (
                       <img src={tryOnResult.tryOnImage} alt="Try-on result" className="w-full aspect-[3/4] object-contain" style={{ background: "#FDFBF6" }} />
                     ) : (
                       <div className="aspect-[3/4] flex items-center justify-center text-[11px] text-faint">No try-on image returned</div>
                     )}
+                    {tryOnResult.mock && (
+                      <span className="absolute top-2 right-2 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-ink/80 text-paper backdrop-blur-sm">
+                        Demo Preview
+                      </span>
+                    )}
                   </div>
                   {tryOnResult.recommendation && (
                     <div className="rounded-2xl p-3 bg-paper border border-border">
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Recommended Palette</div>
-                      <div className="flex gap-1.5 mb-2">
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">Recommended Palette</div>
+                      <div className="flex gap-1.5 mb-2.5">
                         {tryOnResult.recommendation.palette?.map((hex, i) => (
-                          <span key={i} className="w-6 h-6 rounded-full border border-border" style={{ background: hex }} title={hex} />
+                          <span key={i} className="w-6 h-6 rounded-full border border-border shadow-sm" style={{ background: hex }} title={hex} />
                         ))}
                       </div>
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">Key Pieces</div>
+                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">Key Pieces</div>
                       <div className="flex flex-wrap gap-1.5">
                         {tryOnResult.recommendation.pieces?.map((piece, i) => (
                           <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">{piece}</span>

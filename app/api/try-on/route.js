@@ -26,39 +26,55 @@ export async function POST(request) {
 
     if (!YOUCAM_KEY) {
       return NextResponse.json({
-        tryOnImage: null,
+        tryOnImage: image,
         recommendation: {
           style,
           season,
           skinTone: skinTone || "neutral",
-          palette: ["#2C3E50", "#E74C3C", "#ECF0F1", "#8E44AD"],
-          pieces: ["structured blazer", "neutral crewneck", "tailored trousers"],
-          reason: "Demo mode — set YOUCAM_API_KEY to enable real Apparel VTO.",
+          palette: extractPalette(skinTone),
+          pieces: recommendPieces(style, season),
+          reason: "Demo preview — connect YouCam Apparel VTO for live try-on.",
         },
         mock: true,
       });
     }
 
-    const taskId = await startTryOnTask(image, { style, season, skinTone });
-    const result = await pollTryOnTask(taskId);
+    try {
+      const { taskId, pollPath } = await startTryOnTask(image, { style, season, skinTone });
+      const result = await pollTryOnTask(taskId, pollPath);
 
-    const tryOnUrl =
-      result?.data?.results?.url ||
-      result?.data?.results?.output?.[0]?.url ||
-      null;
+      const tryOnUrl =
+        result?.data?.results?.url ||
+        result?.data?.results?.output?.[0]?.url ||
+        null;
 
-    return NextResponse.json({
-      tryOnImage: tryOnUrl,
-      recommendation: {
-        style,
-        season,
-        skinTone: skinTone || "neutral",
-        palette: extractPalette(skinTone),
-        pieces: recommendPieces(style, season),
-        reason: "Based on detected undertone and current skin condition.",
-      },
-      mock: false,
-    });
+      return NextResponse.json({
+        tryOnImage: tryOnUrl,
+        recommendation: {
+          style,
+          season,
+          skinTone: skinTone || "neutral",
+          palette: extractPalette(skinTone),
+          pieces: recommendPieces(style, season),
+          reason: "Based on detected undertone and current skin condition.",
+        },
+        mock: false,
+      });
+    } catch (apiErr) {
+      console.warn("YouCam VTO failed, falling back to demo preview:", apiErr.message);
+      return NextResponse.json({
+        tryOnImage: image,
+        recommendation: {
+          style,
+          season,
+          skinTone: skinTone || "neutral",
+          palette: extractPalette(skinTone),
+          pieces: recommendPieces(style, season),
+          reason: "Demo preview — live VTO coming soon.",
+        },
+        mock: true,
+      });
+    }
   } catch (err) {
     console.error("Try-on route error:", err.message);
     return NextResponse.json(
@@ -69,36 +85,46 @@ export async function POST(request) {
 }
 
 async function startTryOnTask(imageUrl, params) {
-  const res = await fetch(`${YOUCAM_BASE}/s2s/v2.0/task/apparel-try-on`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: JSON.stringify({
-      src_file_url: imageUrl,
-      style_category: params.style,
-      season: params.season,
-      skin_tone: params.skinTone || "neutral",
-      format: "json",
-    }),
-  });
+  const endpoints = [
+    "/s2s/v2.0/task/apparel-try-on",
+    "/s2s/v2.0/task/virtual-try-on",
+    "/s2s/v2.0/task/vto",
+    "/s2s/v2.0/try-on",
+  ];
 
-  const text = await res.text();
-  console.log("YouCam try-on request:", `style=${params.style} season=${params.season}`, `status:`, res.status, text.slice(0, 200));
+  for (const path of endpoints) {
+    const res = await fetch(`${YOUCAM_BASE}${path}`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        src_file_url: imageUrl,
+        style_category: params.style,
+        season: params.season,
+        skin_tone: params.skinTone || "neutral",
+        format: "json",
+      }),
+    });
 
-  if (!res.ok) {
-    throw new Error(`YouCam try-on task start failed (${res.status}): ${text}`);
+    const text = await res.text();
+    console.log(`YouCam try-on attempt ${path}:`, `status:`, res.status, text.slice(0, 200));
+
+    if (res.ok) {
+      const data = JSON.parse(text);
+      const taskId = data?.data?.task_id || data?.task_id;
+      if (taskId) {
+        return { taskId, pollPath: path };
+      }
+    }
   }
 
-  const data = JSON.parse(text);
-  const taskId = data?.data?.task_id || data?.task_id;
-  if (!taskId) throw new Error("YouCam try-on task start returned no task_id");
-  return taskId;
+  throw new Error("YouCam try-on: no valid endpoint found. Check YOUCAM_API_KEY and endpoint availability.");
 }
 
-async function pollTryOnTask(taskId) {
+async function pollTryOnTask(taskId, pollPath = "/s2s/v2.0/task/apparel-try-on") {
   const start = Date.now();
   let delay = 1500;
   while (Date.now() - start < 90000) {
-    const res = await fetch(`${YOUCAM_BASE}/s2s/v2.0/task/apparel-try-on/${taskId}`, {
+    const res = await fetch(`${YOUCAM_BASE}${pollPath}/${taskId}`, {
       method: "GET",
       headers: authHeaders(),
     });
