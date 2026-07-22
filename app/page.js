@@ -36,20 +36,6 @@ export default function LandingPage() {
             Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
           </span>
         </div>
-        <div className="flex items-center gap-3">
-          <Link
-            href="/auth"
-            className="text-xs font-medium text-muted hover:text-ink transition-colors"
-          >
-            Sign in
-          </Link>
-          <Link
-            href="/auth?mode=signup"
-            className="rounded-full px-3.5 py-1.5 text-xs font-semibold bg-ink text-paper hover:opacity-90 transition-opacity"
-          >
-            Create account
-          </Link>
-        </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-5">
