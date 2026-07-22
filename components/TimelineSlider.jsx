@@ -1,32 +1,58 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { TrendingUp, AlertCircle } from "lucide-react";
 import { topConcerns, overallScore } from "@/lib/skinAnalysis";
 
+function interpolateScores(baseline, projected, t) {
+  const result = {};
+  const keys = new Set([...Object.keys(baseline || {}), ...Object.keys(projected || {})]);
+  keys.forEach((key) => {
+    const a = baseline[key];
+    const b = projected[key];
+    if (typeof a === "number" && typeof b === "number") {
+      result[key] = Math.round(a + (b - a) * t);
+    } else if (typeof a === "number") {
+      result[key] = a;
+    } else if (typeof b === "number") {
+      result[key] = b;
+    }
+  });
+  return result;
+}
+
 export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 12 }) {
   const [week, setWeek] = useState(0);
-  const [simulated, setSimulated] = useState(() =>
-    baselineConcerns
-  );
+  const [baselineImage, setBaselineImage] = useState(null);
   const [projectedImage, setProjectedImage] = useState(null);
+  const [simulated, setSimulated] = useState(() => baselineConcerns || {});
   const [imgLoading, setImgLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [finalScores, setFinalScores] = useState(null);
+  const [ready, setReady] = useState(false);
+  const canvasRef = useRef(null);
+  const imgARef = useRef(null);
+  const imgBRef = useRef(null);
+
+  const t = totalWeeks > 0 ? week / totalWeeks : 0;
 
   useEffect(() => {
     let cancelled = false;
+    setReady(false);
     setWeek(0);
     setProjectedImage(null);
+    setFinalScores(null);
     setError(null);
-    async function load(weekIndex) {
+
+    async function load() {
       try {
         const res = await fetch("/api/simulate", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             image,
-            baselineConcerns,
-            weekIndex,
+            baselineConcerns: baselineConcerns || {},
+            weekIndex: totalWeeks,
             totalWeeks,
           }),
         });
@@ -36,71 +62,64 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         }
         const data = await res.json();
         if (cancelled) return;
-        if (data.projectedScores) setSimulated(data.projectedScores);
-        if (data.projectedImages?.length) {
-          setImgLoading(true);
-          setProjectedImage(data.projectedImages[0]);
-        } else {
-          setProjectedImage(null);
-        }
+        setBaselineImage(data.baselineImage || image);
+        setProjectedImage(data.projectedImages?.[0] || null);
+        setFinalScores(data.projectedScores || null);
+        setSimulated(data.projectedScores || baselineConcerns || {});
+        setReady(true);
       } catch (err) {
         if (cancelled) return;
         setError(err.message || "Simulation failed");
-        setProjectedImage(null);
-      } finally {
-        if (!cancelled) setImgLoading(false);
+        setBaselineImage(image);
+        setReady(true);
       }
     }
-    load(0);
+
+    if (image) {
+      load();
+    }
     return () => {
       cancelled = true;
     };
   }, [image, baselineConcerns, totalWeeks]);
 
-  useEffect(() => {
-    if (week === 0) return;
-    let cancelled = false;
-    async function loadWeek() {
-      try {
-        const res = await fetch("/api/simulate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            image,
-            baselineConcerns,
-            weekIndex: week,
-            totalWeeks,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || "Simulation failed");
-        }
-        const data = await res.json();
-        if (cancelled) return;
-        if (data.projectedScores) setSimulated(data.projectedScores);
-        if (data.projectedImages?.length) {
-          setImgLoading(true);
-          setProjectedImage(data.projectedImages[0]);
-        } else {
-          setProjectedImage(null);
-        }
-      } catch (err) {
-        if (cancelled) return;
-        setError(err.message || "Simulation failed");
-        setProjectedImage(null);
-      } finally {
-        if (!cancelled) setImgLoading(false);
-      }
+  const currentScores = useMemo(() => {
+    if (!finalScores || week === 0) {
+      return baselineConcerns || {};
     }
-    loadWeek();
-    return () => {
-      cancelled = true;
-    };
-  }, [week, image, baselineConcerns, totalWeeks]);
+    return interpolateScores(baselineConcerns || {}, finalScores, t);
+  }, [baselineConcerns, finalScores, week, totalWeeks]);
 
-  const overallBaseline = overallScore(baselineConcerns);
-  const overallNow = overallScore(simulated);
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const a = imgARef.current;
+    const b = imgBRef.current;
+
+    if (!a || !b || !a.complete || !b.complete) return;
+
+    const draw = () => {
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.globalAlpha = 1 - t;
+      ctx.drawImage(a, 0, 0, w, h);
+
+      ctx.globalAlpha = t;
+      ctx.drawImage(b, 0, 0, w, h);
+
+      ctx.globalAlpha = 1;
+    };
+
+    draw();
+  }, [t, baselineImage, projectedImage, ready]);
+
+  const overallBaseline = overallScore(baselineConcerns || {});
+  const overallNow = overallScore(currentScores);
   const improvementPct =
     overallBaseline > 0 ? Math.round(((overallBaseline - overallNow) / overallBaseline) * 100) : 0;
 
@@ -108,7 +127,9 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
     <div>
       <div className="flex items-baseline justify-between mb-3">
         <div>
-          <div className="text-xs font-mono uppercase tracking-widest text-muted">Week {week} Projection</div>
+          <div className="text-xs font-mono uppercase tracking-widest text-muted">
+            Week {week} Projection
+          </div>
           <div className="text-2xl font-semibold mt-0.5 text-ink">
             {week === 0 ? "Current Condition" : `${improvementPct}% Improved`}
           </div>
@@ -123,24 +144,40 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         </div>
       )}
 
-      {projectedImage ? (
-        <div className="mb-4 rounded-2xl overflow-hidden border border-border bg-paper">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={projectedImage}
-            alt={`Projected skin at week ${week}`}
+      <div className="mb-4 rounded-2xl overflow-hidden border border-border bg-paper">
+        {baselineImage && (
+          <canvas
+            ref={canvasRef}
+            width={512}
+            height={512}
             className="w-full aspect-square object-contain"
             style={{ background: "#FDFBF6" }}
           />
-          {imgLoading && (
-            <div className="text-[11px] text-center text-faint py-1">Rendering projection…</div>
-          )}
-        </div>
-      ) : (
-        <div className="mb-4 rounded-2xl aspect-square flex items-center justify-center bg-paper border border-border text-[11px] text-faint">
-          {imgLoading ? "Rendering projection…" : error ? "Projection unavailable" : "Projected image will appear here"}
-        </div>
-      )}
+        )}
+        {!baselineImage && (
+          <div className="aspect-square flex items-center justify-center text-[11px] text-faint">
+            {imgLoading ? "Rendering projection…" : error ? "Projection unavailable" : "Projected image will appear here"}
+          </div>
+        )}
+        {baselineImage && projectedImage && (
+          <>
+            <img
+              ref={imgARef}
+              src={baselineImage}
+              alt="Baseline"
+              className="hidden"
+              crossOrigin="anonymous"
+            />
+            <img
+              ref={imgBRef}
+              src={projectedImage}
+              alt="Projected"
+              className="hidden"
+              crossOrigin="anonymous"
+            />
+          </>
+        )}
+      </div>
 
       <input
         type="range"
@@ -158,9 +195,9 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
       </div>
 
       <div className="grid grid-cols-2 gap-2 mt-5">
-        {topConcerns(baselineConcerns, 4).map(({ key, label }) => {
+        {topConcerns(baselineConcerns || {}, 4).map(({ key, label }) => {
           const before = baselineConcerns[key];
-          const now = simulated[key] ?? before;
+          const now = currentScores[key] ?? before;
           return (
             <div key={key} className="rounded-xl px-3 py-2.5 flex items-center justify-between bg-paper border border-border">
               <span className="text-xs font-medium text-[#4A453B]">{label}</span>
@@ -175,8 +212,8 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
       </div>
 
       <p className="text-[11px] mt-4 leading-relaxed text-muted">
-        Simulated using YouCam's AI Skin Simulation — the projection image shows how consistent care could
-        look by week {week}. Actual results vary by consistency of use and individual skin condition.
+        Dual-state visual projection: original photo blended with YouCam simulated final state.
+        Drag the slider to preview the projected improvement curve.
       </p>
     </div>
   );

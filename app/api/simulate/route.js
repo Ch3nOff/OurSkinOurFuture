@@ -38,7 +38,12 @@ export async function POST(request) {
 
     if (!apiKey) {
       const simulated = mockSimulation(baselineConcerns, weekIndex, totalWeeks);
-      return NextResponse.json({ projectedScores: simulated, projectedImages: null, mock: true });
+      return NextResponse.json({
+        projectedScores: simulated,
+        projectedImages: null,
+        baselineImage: image,
+        mock: true,
+      });
     }
 
     if (!image) {
@@ -49,8 +54,6 @@ export async function POST(request) {
     }
 
     let publicUrl = image;
-    // If the client sent a data URL, upload to Supabase Storage first
-    // so YouCam can download it from a public URL.
     if (image.startsWith("data:")) {
       const [meta, b64] = image.split(",");
       const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
@@ -66,6 +69,7 @@ export async function POST(request) {
     return NextResponse.json({
       projectedScores,
       projectedImages: imageUrl ? [imageUrl] : null,
+      baselineImage: publicUrl,
       mock: false,
     });
   } catch (err) {
