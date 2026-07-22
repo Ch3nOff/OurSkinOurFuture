@@ -59,6 +59,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [history, setHistory] = useState(initialHistory);
   const [showHistory, setShowHistory] = useState(false);
   const fileInputRef = useRef(null);
+  const [uploadMode, setUploadMode] = useState("face"); // 'face' | 'full'
 
   const supabase = createClient();
 
