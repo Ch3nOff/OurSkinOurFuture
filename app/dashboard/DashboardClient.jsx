@@ -30,8 +30,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
+  const [recommendationLoading, setRecommendationLoading] = useState(false);
   const [recSource, setRecSource] = useState(null);
-  const [recLoading, setRecLoading] = useState(false);
   const [products, setProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState(null);
@@ -83,27 +83,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       }
       setAnalysis(result);
       setStage("results");
-
-      setRecLoading(true);
-      const recRes = await fetch("/api/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ concerns: result.concerns }),
-      });
-      const recData = await recRes.json();
-      if (recData.error) {
-        setRecommendation(`Note unavailable: ${recData.error}`);
-        setRecSource("error");
-      } else {
-        setRecommendation(recData.recommendation);
-        setRecSource(recData.source ?? null);
-      }
     } catch (err) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
       setStage("capture");
-    } finally {
-      setRecLoading(false);
     }
   }
 
@@ -133,6 +116,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setImagePreview(null);
     setAnalysis(null);
     setRecommendation(null);
+    setRecommendationLoading(false);
     setRoutine("");
     setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
     setPlan(null);
@@ -210,6 +194,31 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setPlanSource("error");
     } finally {
       setPlanLoading(false);
+    }
+  }
+
+  async function fetchRecommendation() {
+    if (!analysis?.concerns) return;
+    setRecommendationLoading(true);
+    try {
+      const res = await fetch("/api/recommend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ concerns: analysis.concerns }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setRecommendation(`Note unavailable: ${data.error}`);
+        setRecSource("error");
+      } else {
+        setRecommendation(data.recommendation);
+        setRecSource(data.source ?? null);
+      }
+    } catch (err) {
+      setRecommendation(`Note unavailable: ${err.message || "Failed to generate note."}`);
+      setRecSource("error");
+    } finally {
+      setRecommendationLoading(false);
     }
   }
 
@@ -622,20 +631,31 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 <Sparkles size={13} className="text-gold" />
                 <span className="text-[11px] font-mono uppercase tracking-widest text-gold">Personal Note</span>
               </div>
-              {recLoading ? (
+              {recommendationLoading ? (
                 <div className="flex items-center gap-2 py-2">
                   <Loader2 size={14} className="animate-spin text-paper" />
                   <span className="text-xs text-faint">Writing your personal recommendation...</span>
                 </div>
-              ) : (
+              ) : recommendation ? (
                 <>
                   <p className={`text-sm leading-relaxed whitespace-pre-line ${recSource === "error" ? "text-clay" : "text-[#F0EBDD]"}`}>
-                    {recommendation || "Your personalized note will appear here after analysis."}
+                    {recommendation}
                   </p>
-                  {!recLoading && recommendation && recSource === "error" && (
+                  {!recommendationLoading && recommendation && recSource === "error" && (
                     <p className="text-[10px] font-mono text-clay mt-2">Qwen error · check DASHSCOPE_API_KEY in Vercel</p>
                   )}
                 </>
+              ) : (
+                <button
+                  onClick={fetchRecommendation}
+                  disabled={!analysis}
+                  className="rounded-2xl px-5 py-2.5 text-xs font-semibold bg-gold text-ink active:scale-[0.98] transition-transform disabled:opacity-50"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles size={13} />
+                    Get my personal note
+                  </span>
+                </button>
               )}
             </section>
 
