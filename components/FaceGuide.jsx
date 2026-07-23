@@ -2,6 +2,36 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 
+const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/8zyLL8Q0X/";
+
+let tmModelCache = null;
+
+async function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+async function loadTMModel() {
+  if (tmModelCache) return tmModelCache;
+
+  if (!window.tf) {
+    await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js");
+  }
+  if (!window.tmImage) {
+    await loadScript("https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js");
+  }
+
+  const modelURL = TM_MODEL_URL + "model.json";
+  const metadataURL = TM_MODEL_URL + "metadata.json";
+  tmModelCache = await window.tmImage.load(modelURL, metadataURL);
+  return tmModelCache;
+}
+
 export default function FaceGuide({ image, onValidate }) {
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("Waiting for photo...");
@@ -106,6 +136,19 @@ export default function FaceGuide({ image, onValidate }) {
       if (response.ok) {
         const data = await response.json();
         return data.hasGlasses === true;
+      }
+    } catch {}
+
+    try {
+      const model = await loadTMModel();
+      const prediction = await model.predict(img);
+      const glassesClass = prediction.find((p) => /glass/i.test(p.className));
+      if (glassesClass) {
+        return glassesClass.probability > 0.5;
+      }
+      if (prediction.length > 0) {
+        const best = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
+        return best.probability > 0.5;
       }
     } catch {}
 
