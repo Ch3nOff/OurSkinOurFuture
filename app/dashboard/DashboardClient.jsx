@@ -23,6 +23,7 @@ import IngredientCard from "@/components/IngredientCard";
 import TimelineSlider from "@/components/TimelineSlider";
 import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
+import SkinHealthDashboard from "@/components/SkinHealthDashboard";
 import { detectPhotoType } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
@@ -682,6 +683,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 </section>
               );
             })()}
+
+            <SkinHealthDashboard analysis={analysis} />
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
