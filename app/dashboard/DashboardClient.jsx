@@ -737,6 +737,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             </section>
 
+            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
+              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Color Harmony</div>
+              <p className="text-[11px] text-muted mb-3">Based on your undertone and active concerns, these hues will complement your complexion.</p>
+              <div className="flex gap-3">
+                {[ "#2E8B57", "#3B5998", "#D4A5A5", "#E2725B", "#36454F" ].map((hex, i) => (
+                  <div key={i} className="flex flex-col items-center gap-1.5">
+                    <div className="w-10 h-10 rounded-full border-2 border-border shadow-sm" style={{ background: hex }} title={hex} />
+                    <span className="text-[10px] font-mono text-muted">{hex}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
             <section className="mb-4">
               <div className="text-xs font-mono uppercase tracking-widest mb-3 px-1 text-muted">
                 Recommended Ingredients
