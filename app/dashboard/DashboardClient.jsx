@@ -275,17 +275,29 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   }
 
   function loadPastScan(scan) {
+    const safeConcerns = scan.concern_scores && typeof scan.concern_scores === "object" ? scan.concern_scores : {};
+    const safeZones = scan.zone_scores && typeof scan.zone_scores === "object" ? scan.zone_scores : {};
     setAnalysis({
-      concerns: scan.concern_scores,
-      zones: scan.zone_scores,
+      concerns: safeConcerns,
+      zones: safeZones,
+      masks: scan.masks || {},
+      overall: typeof scan.overall_score === "number" ? scan.overall_score : null,
+      skinAge: typeof scan.skin_age === "number" ? scan.skin_age : null,
+      skinTypes: Array.isArray(scan.skin_types) ? scan.skin_types : [],
       mock: scan.mock ?? false,
+      imageUrl: scan.image_url || null,
+      resizeImage: scan.resize_image || null,
     });
     setImagePreview(scan.image_url || null);
     setRecommendation(scan.recommendation_text || null);
     setRoutine(scan.routine || "");
     setPlan(scan.qwen_plan || null);
     setPlanSource(scan.qwen_plan ? "qwen" : null);
-    if (scan.preferences) setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "", ...scan.preferences });
+    if (scan.preferences && typeof scan.preferences === "object") {
+      setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "", ...scan.preferences });
+    } else {
+      setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
+    }
     setStage("results");
     setShowHistory(false);
   }
