@@ -9,7 +9,7 @@ export default function SkinHealthDashboard({ analysis }) {
     const avg = Math.round(top.reduce((s, c) => s + c.score, 0) / top.length);
     const label = avg >= 70 ? "Needs attention" : avg >= 40 ? "Moderate" : "Good";
     const color = avg >= 70 ? "#B85C4A" : avg >= 40 ? "#C9A876" : "#4A6355";
-    const bg = avg >= 70 ? "#B85C4A15" : avg >= 40 ? "#C9A87615" : "#4A635515";
+    const bg = avg >= 70 ? "#B85C4A10" : avg >= 40 ? "#C9A87610" : "#4A635510";
     return { avg, label, color, bg, top };
   }, [analysis]);
 
@@ -25,7 +25,7 @@ export default function SkinHealthDashboard({ analysis }) {
           const pct = Math.min(100, Math.max(0, c.score));
           const barColor = pct >= 61 ? "bg-[#B85C4A]" : pct >= 31 ? "bg-[#C9A876]" : "bg-[#4A6355]";
           return (
-            <div key={c.key} className="flex-1 min-w-[120px] rounded-2xl p-3 border border-border" style={{ background: snapshot.bg }}>
+            <div key={c.key} className="flex-1 min-w-[120px] rounded-2xl p-3 border border-border group hover:shadow-md hover:border-[#C9A876]/40 hover:-translate-y-0.5 transition-all duration-200" style={{ background: snapshot.bg }}>
               <div className="flex items-center gap-1.5 mb-1.5">
                 <span className="text-sm leading-none">{icon}</span>
                 <span className="text-[11px] font-medium text-ink truncate">{label}</span>
