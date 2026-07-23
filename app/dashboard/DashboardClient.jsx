@@ -14,7 +14,6 @@ import {
   Loader2,
   LogIn,
   LogOut,
-  History,
   ClipboardList,
   HeartPulse,
   CheckCircle2,
@@ -65,7 +64,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [saveError, setSaveError] = useState("");
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
-  const [showHistory, setShowHistory] = useState(false);
   const [viewingHistory, setViewingHistory] = useState(false);
   const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
   const [simulationResult, setSimulationResult] = useState(null);
@@ -423,15 +421,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         </Link>
 
         <div className="flex items-center gap-3">
-          {user && history.length > 0 && (
-            <button
-              onClick={() => setShowHistory((s) => !s)}
-              className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors"
-            >
-              <History size={13} />
-              History
-            </button>
-          )}
           {user ? (
             <button
               onClick={async () => {
@@ -453,72 +442,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       </header>
 
       <main className="max-w-2xl mx-auto px-5 pb-16">
-        {showHistory && (
-          <div className="mt-4 rounded-3xl p-5 bg-card border border-border">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <ScanFace size={14} className="text-gold" />
-                <div className="text-xs font-mono uppercase tracking-widest text-muted">Scan Timeline</div>
-              </div>
-              <button onClick={() => setShowHistory(false)} className="text-muted hover:text-ink">
-                <X size={14} />
-              </button>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {history.map((scan) => {
-                const top = topConcerns(scan.concern_scores || {}, 1)[0];
-                const score = typeof scan.overall_score === "number" ? scan.overall_score : null;
-                const date = new Date(scan.created_at);
-                const isToday = date.toDateString() === new Date().toDateString();
-                const timeStr = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-                const dateStr = isToday ? "Today" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-                const scoreColor = score == null ? "#9CA3AF" : score >= 70 ? "#4A6355" : score >= 40 ? "#C9A876" : "#B85C4A";
-                return (
-                  <button
-                    key={scan.id}
-                    onClick={() => loadPastScan(scan)}
-                    className="group relative rounded-2xl overflow-hidden bg-paper border border-border hover:border-gold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left"
-                  >
-                    {scan.image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={scan.image_url} alt="" className="w-full aspect-[3/4] object-cover" />
-                    ) : (
-                      <div className="w-full aspect-[3/4] bg-border flex items-center justify-center">
-                        <ScanFace size={20} className="text-faint" />
-                      </div>
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <div className="absolute top-2 right-2">
-                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full text-paper" style={{ background: scoreColor }}>
-                        {score != null ? score : "—"}
-                      </span>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 p-2.5">
-                      <div className="text-[11px] font-semibold text-paper truncate">
-                        {dateStr} · {timeStr}
-                      </div>
-                      <div className="text-[10px] text-white/70 truncate">
-                        {top ? `${top.key}: ${top.score}` : scan.mock ? "Demo scan" : "View details"}
-                      </div>
-                    </div>
-                    {scan.mock && (
-                      <div className="absolute top-2 left-2">
-                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-white/80 backdrop-blur">DEMO</span>
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-            {history.length === 0 && (
-              <div className="text-center py-8">
-                <ScanFace size={24} className="text-faint mx-auto mb-2" />
-                <p className="text-xs text-muted">No scans yet. Complete your first analysis to see it here.</p>
-              </div>
-            )}
-          </div>
-        )}
-
         {stage === "capture" && (
           <div className="mt-6">
             {analysisError && (
@@ -593,6 +516,61 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 used. Your personalized plan is generated by Qwen. See ROADMAP.md for details.
               </p>
             </div>
+
+            {history.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-3">
+                  <ScanFace size={14} className="text-gold" />
+                  <div className="text-xs font-mono uppercase tracking-widest text-muted">Previous Scans</div>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {history.map((scan) => {
+                    const top = topConcerns(scan.concern_scores || {}, 1)[0];
+                    const score = typeof scan.overall_score === "number" ? scan.overall_score : null;
+                    const date = new Date(scan.created_at);
+                    const isToday = date.toDateString() === new Date().toDateString();
+                    const timeStr = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+                    const dateStr = isToday ? "Today" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                    const scoreColor = score == null ? "#9CA3AF" : score >= 70 ? "#4A6355" : score >= 40 ? "#C9A876" : "#B85C4A";
+                    return (
+                      <button
+                        key={scan.id}
+                        onClick={() => loadPastScan(scan)}
+                        className="group relative rounded-2xl overflow-hidden bg-paper border border-border hover:border-gold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left"
+                      >
+                        {scan.image_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={scan.image_url} alt="" className="w-full aspect-[3/4] object-cover" />
+                        ) : (
+                          <div className="w-full aspect-[3/4] bg-border flex items-center justify-center">
+                            <ScanFace size={20} className="text-faint" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute top-2 right-2">
+                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full text-paper" style={{ background: scoreColor }}>
+                            {score != null ? score : "—"}
+                          </span>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                          <div className="text-[11px] font-semibold text-paper truncate">
+                            {dateStr} · {timeStr}
+                          </div>
+                          <div className="text-[10px] text-white/70 truncate">
+                            {top ? `${top.key}: ${top.score}` : scan.mock ? "Demo scan" : "View details"}
+                          </div>
+                        </div>
+                        {scan.mock && (
+                          <div className="absolute top-2 left-2">
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-white/80 backdrop-blur">DEMO</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
