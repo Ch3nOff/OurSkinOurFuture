@@ -1,36 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-
-const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/8zyLL8Q0X/";
-
-let tmModelCache = null;
-
-async function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
-async function loadTMModel() {
-  if (tmModelCache) return tmModelCache;
-
-  if (!window.tf) {
-    await loadScript("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js");
-  }
-  if (!window.tmImage) {
-    await loadScript("https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js");
-  }
-
-  const modelURL = TM_MODEL_URL + "model.json";
-  const metadataURL = TM_MODEL_URL + "metadata.json";
-  tmModelCache = await window.tmImage.load(modelURL, metadataURL);
-  return tmModelCache;
-}
+import { useState, useRef, useEffect } from "react";
 
 export default function FaceGuide({ image, onValidate }) {
   const [status, setStatus] = useState("idle");
@@ -76,7 +46,7 @@ export default function FaceGuide({ image, onValidate }) {
         setMessage("Good lighting detected.");
       }
 
-      const hasGlasses = await detectGlasses(img, dataUrl);
+      const hasGlasses = await detectGlasses(img);
       if (hasGlasses) {
         setGlassesDetected(true);
         setMessage((prev) => prev + " Glasses detected — please remove them for accurate skin analysis.");
@@ -118,14 +88,6 @@ export default function FaceGuide({ image, onValidate }) {
   }
 
   async function detectGlasses(img) {
-    const canvas = canvasRef.current || document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    const w = img.width;
-    const h = img.height;
-    canvas.width = w;
-    canvas.height = h;
-    ctx.drawImage(img, 0, 0);
-
     try {
       const response = await fetch("/api/glasses-detect", {
         method: "POST",
@@ -135,46 +97,126 @@ export default function FaceGuide({ image, onValidate }) {
       });
       if (response.ok) {
         const data = await response.json();
-        return data.hasGlasses === true;
+        if (data.hasGlasses === true) return true;
       }
     } catch {}
 
-    try {
-      const model = await loadTMModel();
-      const prediction = await model.predict(img);
-      const glassesClass = prediction.find((p) => /glass/i.test(p.className));
-      if (glassesClass) {
-        return glassesClass.probability > 0.5;
-      }
-      if (prediction.length > 0) {
-        const best = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
-        return best.probability > 0.5;
-      }
-    } catch {}
+    const w = img.width;
+    const h = img.height;
+    const canvas = canvasRef.current || document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = w;
+    canvas.height = h;
+    ctx.drawImage(img, 0, 0);
 
-    const centerY = Math.floor(h * 0.36);
-    const sampleWidth = Math.floor(w * 0.65);
-    const startX = Math.floor((w - sampleWidth) / 2);
-    const sampleHeight = Math.floor(h * 0.14);
-    const startY = centerY - Math.floor(sampleHeight / 2);
+    const eyeCenterY = Math.floor(h * 0.38);
+    const eyeH = Math.max(12, Math.floor(h * 0.16));
+    const band = sampleBand(ctx, w, h, 0.25, 0.75, eyeCenterY - Math.floor(eyeH / 2), eyeH);
+    const darkRatio = band.dark;
+    const shapeScore = band.shape;
+    const centerLift = band.centerLift;
 
-    const imageData = ctx.getImageData(startX, startY, sampleWidth, sampleHeight);
-    const data = imageData.data;
-    let darkPixels = 0;
-    let totalPixels = 0;
+    const strongBand = darkRatio > 0.28 || (darkRatio > 0.18 && centerLift > 0.04);
+    const shapeyBand = shapeScore > 0.12;
+
+    const leftEyeBox = sampleBox(ctx, Math.floor(w * 0.12), Math.floor(h * 0.30), Math.floor(w * 0.30), Math.floor(h * 0.22));
+    const rightEyeBox = sampleBox(ctx, Math.floor(w * 0.58), Math.floor(h * 0.30), Math.floor(w * 0.30), Math.floor(h * 0.22));
+    const bridgeBox = sampleBox(ctx, Math.floor(w * 0.38), Math.floor(h * 0.34), Math.floor(w * 0.24), Math.floor(h * 0.14));
+
+    const symScore = 1 - Math.abs(leftEyeBox.dark - rightEyeBox.dark);
+    const bridgeLight = Math.max(0, 1 - bridgeBox.dark);
+
+    const eyeHasDarkPatches = leftEyeBox.dark > 0.22 || rightEyeBox.dark > 0.22;
+    const symmetricDark = symScore > 0.65;
+
+    const score =
+      (strongBand ? 1.2 : 0) +
+      (shapeyBand ? 0.6 : 0) +
+      (centerLift * 1.5) +
+      (symmetricDark ? 0.35 : 0) +
+      (bridgeLight > 0.08 ? 0.25 : 0) +
+      (eyeHasDarkPatches ? 0.2 : 0) +
+      (darkRatio > 0.12 ? 0.15 : 0);
+
+    return score > 1.1;
+  }
+
+  function sampleBand(ctx, w, h, startXFrac, endXFrac, startY, height) {
+    const startX = Math.max(0, Math.floor(w * startXFrac));
+    const endX = Math.min(w, Math.floor(w * endXFrac));
+    const data = ctx.getImageData(startX, startY, endX - startX, height).data;
+    const cols = endX - startX;
+    const rows = height;
+    let total = 0;
+    let dark = 0;
+    let bright = 0;
+    const columnDark = new Array(cols).fill(0);
+    const columnBright = new Array(cols).fill(0);
+
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const idx = (y * cols + x) * 4;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        const brightness = (r + g + b) / 3;
+        total++;
+        if (brightness < 85 && Math.abs(r - g) < 35 && Math.abs(g - b) < 35 && Math.abs(r - b) < 42) {
+          dark++;
+          columnDark[x]++;
+        }
+        if (brightness > 170) {
+          bright++;
+          columnBright[x]++;
+        }
+      }
+    }
+
+    const leftDark = columnDark.slice(0, Math.max(1, Math.floor(cols / 4))).reduce((a, b) => a + b, 0);
+    const rightDark = columnDark.slice(-Math.max(1, Math.floor(cols / 4))).reduce((a, b) => a + b, 0);
+    const midDark = columnDark.slice(Math.floor(cols / 4), Math.floor((3 * cols) / 4)).reduce((a, b) => a + b, 0);
+    const centerLift = (leftDark + rightDark) > 0 ? (midDark - (leftDark + rightDark) * 0.55) / ((leftDark + rightDark) * 0.55 + 1) : 0;
+
+    const leftAvg = colAvg(columnDark, 0, Math.floor(cols / 2));
+    const rightAvg = colAvg(columnDark, Math.floor(cols / 2), cols);
+    const shape = cols > 10 && (leftAvg + rightAvg) > 0 ? Math.abs(leftAvg - rightAvg) / (leftAvg + rightAvg) : 0;
+
+    return {
+      dark: total > 0 ? dark / total : 0,
+      shape,
+      centerLift,
+    };
+  }
+
+  function sampleBox(ctx, x, y, width, height) {
+    const data = ctx.getImageData(x, y, width, height).data;
+    let total = 0;
+    let dark = 0;
+    let minBright = 255;
+    let maxBright = 0;
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
       const brightness = (r + g + b) / 3;
-      totalPixels++;
-      if (brightness < 70 && Math.abs(r - g) < 28 && Math.abs(g - b) < 28 && Math.abs(r - b) < 35) {
-        darkPixels++;
+      total++;
+      if (brightness < minBright) minBright = brightness;
+      if (brightness > maxBright) maxBright = brightness;
+      if (brightness < 95 && Math.abs(r - g) < 38 && Math.abs(g - b) < 38 && Math.abs(r - b) < 48) {
+        dark++;
       }
     }
+    return {
+      dark: total > 0 ? dark / total : 0,
+      contrast: maxBright - minBright,
+    };
+  }
 
-    const ratio = totalPixels > 0 ? darkPixels / totalPixels : 0;
-    return ratio > 0.22;
+  function colAvg(values, start, end) {
+    let sum = 0;
+    const slice = values.slice(start, end);
+    for (let i = 0; i < slice.length; i++) sum += slice[i];
+    return slice.length ? sum / slice.length : 0;
   }
 
   useEffect(() => {
