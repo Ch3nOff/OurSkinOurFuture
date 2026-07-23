@@ -683,10 +683,28 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
                 <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Skin Profile</div>
                 <div className="flex flex-wrap gap-4">
+                  {/* Skin health ring */}
                   {analysis.overall != null && (
-                    <div>
-                      <div className="text-2xl font-semibold text-ink">{analysis.overall}</div>
-                      <div className="text-[11px] text-muted">Overall score</div>
+                    <div className="flex flex-col items-center gap-1">
+                      <svg width="72" height="72" viewBox="0 0 72 72">
+                        <circle cx="36" cy="36" r="30" fill="none" stroke="#F0EBDD" strokeWidth="6" />
+                        <circle
+                          cx="36"
+                          cy="36"
+                          r="30"
+                          fill="none"
+                          stroke={analysis.overall >= 70 ? "#4A6355" : analysis.overall >= 40 ? "#C9A876" : "#B85C4A"}
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          strokeDasharray={`${2 * Math.PI * 30}`}
+                          strokeDashoffset={`${2 * Math.PI * 30 * (1 - analysis.overall / 100)}`}
+                          transform="rotate(-90 36 36)"
+                        />
+                        <text x="36" y="40" textAnchor="middle" className="text-xs font-semibold fill-ink">
+                          {analysis.overall}
+                        </text>
+                      </svg>
+                      <span className="text-[10px] text-muted">Skin health</span>
                     </div>
                   )}
                   {analysis.skinAge != null && (
