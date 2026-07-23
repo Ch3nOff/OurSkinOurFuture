@@ -42,6 +42,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [tryOnLoading, setTryOnLoading] = useState(false);
   const [tryOnError, setTryOnError] = useState(null);
 
+  const [garments, setGarments] = useState([]);
+  const [selectedGarment, setSelectedGarment] = useState(null);
+  const [garmentLoading, setGarmentLoading] = useState(false);
+
   const [routine, setRoutine] = useState("");
   const [prefs, setPrefs] = useState({
     sleep: "",
@@ -104,6 +108,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setAnalysis(result.analysis);
       setTryOnResult(result.tryOnImage ? { tryOnImage: result.tryOnImage, recommendation: result.recommendation, mock: result.mock } : null);
       setStage("results");
+      fetchGarments();
     } catch (err) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
@@ -147,6 +152,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setTryOnResult(null);
     setTryOnLoading(false);
     setTryOnError(null);
+    setGarments([]);
+    setSelectedGarment(null);
+    setGarmentLoading(false);
     setPhotoType(null);
     setProgressReview(null);
     setProgressLoading(false);
@@ -251,6 +259,31 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setProgressReview(`Review unavailable: ${err.message || "Failed to generate review."}`);
     } finally {
       setProgressLoading(false);
+    }
+  }
+
+  async function fetchGarments() {
+    if (!analysis) return;
+    setGarmentLoading(true);
+    setSelectedGarment(null);
+    setTryOnResult(null);
+    try {
+      const topConcernKeys = Object.entries(analysis.concerns || {})
+        .filter(([, s]) => typeof s === "number" && s >= 31)
+        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+        .slice(0, 3)
+        .map(([key]) => key);
+
+      const undertone = analysis.skinTypes?.[0]?.skinType === "Oily" ? "warm" : "neutral";
+      const res = await fetch(`/api/try-on?undertone=${encodeURIComponent(undertone)}&concerns=${encodeURIComponent(topConcernKeys.join(","))}`);
+      const data = await res.json();
+      if (data.garments) {
+        setGarments(data.garments);
+      }
+    } catch (err) {
+      console.error("Failed to fetch garments:", err);
+    } finally {
+      setGarmentLoading(false);
     }
   }
 
@@ -740,25 +773,68 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                       </span>
                     )}
                   </div>
-                  {tryOnResult.recommendation && (
-                    <div className="rounded-2xl p-3 bg-paper border border-border">
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">Recommended Palette</div>
-                      <div className="flex gap-1.5 mb-2.5">
-                        {tryOnResult.recommendation.palette?.map((hex, i) => (
-                          <span key={i} className="w-6 h-6 rounded-full border border-border shadow-sm" style={{ background: hex }} title={hex} />
-                        ))}
-                      </div>
-                      <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1.5">Key Pieces</div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {tryOnResult.recommendation.pieces?.map((piece, i) => (
-                          <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">{piece}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  <button
+                    onClick={() => { setTryOnResult(null); setTryOnError(null); }}
+                    className="w-full rounded-2xl py-2.5 text-xs font-semibold bg-paper text-ink border border-border active:scale-[0.98] transition-transform"
+                  >
+                    Back to wardrobe
+                  </button>
+                </div>
+              ) : garmentLoading ? (
+                <div className="text-center py-6">
+                  <Loader2 size={18} className="animate-spin mx-auto mb-2 text-muted" />
+                  <p className="text-xs text-faint">Curating color-harmonized wardrobe...</p>
+                </div>
+              ) : garments.length > 0 ? (
+                <div className="space-y-3">
+                  <p className="text-[11px] text-muted mb-2">Color-matched to your undertone & current concerns</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {garments.map((g) => (
+                      <button
+                        key={g.id}
+                        onClick={async () => {
+                          setSelectedGarment(g);
+                          setTryOnLoading(true);
+                          setTryOnError(null);
+                          try {
+                            const res = await fetch("/api/try-on", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                userImage: imagePreview,
+                                garmentImage: g.imageUrl,
+                                category: g.category,
+                                skinTone: "neutral",
+                              }),
+                            });
+                            const data = await res.json();
+                            if (data.error) {
+                              setTryOnError(data.error);
+                            } else {
+                              setTryOnResult(data);
+                            }
+                          } catch (err) {
+                            setTryOnError(err.message || "Try-on failed");
+                          } finally {
+                            setTryOnLoading(false);
+                          }
+                        }}
+                        disabled={tryOnLoading}
+                        className="rounded-2xl overflow-hidden border border-border bg-paper active:scale-[0.98] transition-transform disabled:opacity-50 text-left"
+                      >
+                        <div className="aspect-[3/4] relative">
+                          <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover" />
+                          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
+                            <p className="text-[10px] font-medium text-white">{g.name}</p>
+                            <p className="text-[9px] text-white/80">{g.reason}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
-                <div className="text-center py-6 text-faint text-xs">Try-on will appear here after your scan</div>
+                <div className="text-center py-6 text-faint text-xs">Color-matched outfits will appear here after your scan</div>
               )}
             </section>
 

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { analyzeWithYouCamFromUrl } from "@/lib/youcam";
-import { startTryOnTask, pollTryOnTask, extractPalette, recommendPieces } from "@/lib/vto";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -34,7 +33,7 @@ async function uploadToSupabase(buffer, contentType) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { image, faceImage, style = "casual", season = "all", userId } = body;
+    const { image, faceImage, userId } = body;
 
     if (!image && !faceImage) {
       return NextResponse.json({ error: "An image is required." }, { status: 400 });
@@ -60,22 +59,8 @@ export async function POST(request) {
       return null;
     });
 
-    const vtoPromise = (async () => {
-      try {
-        const { taskId, pollPath } = await startTryOnTask(fullUrl, { style, season });
-        const result = await pollTryOnTask(taskId, pollPath);
-        const url = result?.data?.results?.url || result?.data?.results?.output?.[0]?.url || null;
-        return { url, success: !!url };
-      } catch (err) {
-        console.error("VTO failed:", err.message);
-        return { url: null, success: false, error: err.message };
-      }
-    })();
-
-    const [skinResult, vtoResult] = await Promise.all([skinPromise, vtoPromise]);
-
+    const skinResult = await skinPromise;
     const analysis = skinResult || { mock: true, concerns: {}, zones: {} };
-    const tryOn = vtoResult;
 
     if (userId) {
       const supabase = await createClient();
@@ -91,16 +76,7 @@ export async function POST(request) {
 
     return NextResponse.json({
       analysis,
-      tryOnImage: tryOn?.url || null,
-      recommendation: {
-        style,
-        season,
-        skinTone: "neutral",
-        palette: extractPalette("neutral"),
-        pieces: recommendPieces(style, season),
-        reason: "Based on your scan and selected style.",
-      },
-      mock: !skinResult || !tryOn?.success,
+      mock: !skinResult,
     });
   } catch (err) {
     console.error("Analyze-and-style route error:", err.message);
