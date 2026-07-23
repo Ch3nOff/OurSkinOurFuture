@@ -708,6 +708,27 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </section>
             )}
 
+            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
+              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Top Concerns</div>
+              <div className="space-y-3">
+                {topConcerns(analysis.concerns, 5).map((c) => {
+                  const pct = Math.min(100, Math.max(0, c.score));
+                  const color = pct >= 61 ? "bg-[#B85C4A]" : pct >= 31 ? "bg-[#C9A876]" : "bg-[#4A6355]";
+                  return (
+                    <div key={c.key}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-ink">{CONCERN_LABELS[c.key] || c.key}</span>
+                        <span className="text-[11px] font-mono text-muted">{pct}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-[#F0EBDD] overflow-hidden">
+                        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+
             <section className="mb-4">
               <div className="text-xs font-mono uppercase tracking-widest mb-3 px-1 text-muted">
                 Recommended Ingredients
