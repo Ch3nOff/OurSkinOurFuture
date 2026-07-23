@@ -82,3 +82,4 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 | 2026-07-22 (6) | Visual polish: Top Concerns severity bars, Skin Health Snapshot, Skin Condition Radar, Color Harmony section, personalized Routine builder, before/after toggle, concern icons |
 | 2026-07-23 (1) | **VTO removal**: deleted try-on routes, garment catalog, VTO lib, ManualCrop, SkinHealthDashboard; simplified crop to guided upload |
 | 2026-07-23 (2) | **OurSkinOurFuture pivot**: rebranded to clinical skin suite, added FaceGuide validation component, glasses detection API (`/api/glasses-detect`), updated all section copy to diagnostic terminology |
+| 2026-07-23 (3) | **Save + zone map fixes**: `handleSave` now persists `masks`, `overall_score`, `skin_age`, `skin_types`, `mock`, `resize_image`; added `migration_add_youcam_fields.sql`; fixed `FaceZoneMap` mask positioning by adding explicit `x/y/w/h` to `POSITIONS` |
