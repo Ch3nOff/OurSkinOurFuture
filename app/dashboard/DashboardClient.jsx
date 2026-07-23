@@ -65,6 +65,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [showHistory, setShowHistory] = useState(false);
   const [viewingHistory, setViewingHistory] = useState(false);
   const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
+  const [simulationResult, setSimulationResult] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -154,6 +155,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setSaveState("idle");
     setValidation({ status: "idle", message: "", hasGlasses: false });
     setViewingHistory(false);
+    setSimulationResult(null);
   }
 
   async function fetchProducts() {
@@ -302,6 +304,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     } else {
       setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
     }
+    setSimulationResult(scan.simulation && typeof scan.simulation === "object" ? scan.simulation : null);
     setStage("results");
     setShowHistory(false);
     setViewingHistory(true);
@@ -344,6 +347,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           skin_age: analysis.skinAge ?? null,
           skin_types: analysis.skinTypes || [],
           mock: analysis.mock ?? false,
+          simulation: simulationResult && Object.keys(simulationResult).length > 0 ? simulationResult : {},
           recommendation_text: recommendation,
           routine: routine || null,
           preferences: prefs || null,
@@ -939,7 +943,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Treatment Simulation</div>
-              <TimelineSlider image={imagePreview} baselineConcerns={analysis.concerns} totalWeeks={12} />
+              <TimelineSlider
+                image={imagePreview}
+                baselineConcerns={analysis.concerns}
+                totalWeeks={12}
+                savedSimulation={simulationResult}
+                onSimulationReady={setSimulationResult}
+              />
             </section>
 
             <div className="mb-4">

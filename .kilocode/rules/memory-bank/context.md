@@ -9,6 +9,10 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 ## Recently Completed
 - [x] **VTO removal**: Deleted all apparel try-on code (routes, libs, UI, garment catalog). App is now 100% focused on facial skin.
 - [x] **OurSkinOurFuture rebrand**: Updated landing page, dashboard header, section titles, and metadata to clinical skin-suite branding.
+- [x] **Full scan persistence**: `handleSave` now saves all YouCam fields (`masks`, `overall_score`, `skin_age`, `skin_types`, `mock`, `resize_image`, `simulation`) plus photo and routine data.
+- [x] **Visual history panel**: Replaced plain history list with a card-based Scan Timeline grid showing thumbnails, score badges, dates, top concerns, and demo tags.
+- [x] **History save-button logic**: Save button is hidden when viewing a past scan (`viewingHistory` flag), shown only for fresh captures/analyses.
+- [x] **Simulation persistence**: Simulation results are saved to `scans.simulation` and reused from history via `TimelineSlider`'s `savedSimulation` prop instead of re-calling `/api/simulate`.
 - [x] **FaceGuide component** (`components/FaceGuide.jsx`): Post-capture validation that checks image dimensions, aspect ratio, brightness, and glasses detection.
 - [x] **Glasses detection API** (`app/api/glasses-detect/route.js`): Primary via YouCam `face-attribute` task; fallback heuristic on eye-region dark-pixel ratio.
 - [x] **Face guide UI**: Upload screen shows a dashed oval guide with "Center face · No glasses" prompt. Validation results appear after photo capture.
@@ -83,3 +87,4 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 | 2026-07-23 (1) | **VTO removal**: deleted try-on routes, garment catalog, VTO lib, ManualCrop, SkinHealthDashboard; simplified crop to guided upload |
 | 2026-07-23 (2) | **OurSkinOurFuture pivot**: rebranded to clinical skin suite, added FaceGuide validation component, glasses detection API (`/api/glasses-detect`), updated all section copy to diagnostic terminology |
 | 2026-07-23 (3) | **Save + zone map fixes**: `handleSave` now persists `masks`, `overall_score`, `skin_age`, `skin_types`, `mock`, `resize_image`; added `migration_add_youcam_fields.sql`; fixed `FaceZoneMap` mask positioning by adding explicit `x/y/w/h` to `POSITIONS` |
+| 2026-07-23 (4) | **Simulation persistence**: added `scans.simulation` JSONB column; `TimelineSlider` accepts `savedSimulation` prop and `onSimulationReady` callback; DashboardClient stores simulation in state and saves it with the scan; viewing history reuses saved simulation instead of calling `/api/simulate` again; redesigned history panel as visual Scan Timeline grid with score badges and demo tags |

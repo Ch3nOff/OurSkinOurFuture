@@ -21,7 +21,7 @@ function interpolateScores(baseline, projected, t) {
   return result;
 }
 
-export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 12 }) {
+export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 12, savedSimulation, onSimulationReady }) {
   const [week, setWeek] = useState(0);
   const [baselineImage, setBaselineImage] = useState(null);
   const [projectedImage, setProjectedImage] = useState(null);
@@ -47,6 +47,16 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
     setShowOriginal(false);
 
     async function load() {
+      if (savedSimulation && Object.keys(savedSimulation).length > 0) {
+        const simulated = savedSimulation.projectedScores || savedSimulation.scores || baselineConcerns || {};
+        setSimulated(simulated);
+        setFinalScores(simulated);
+        setBaselineImage(savedSimulation.baselineImage || image);
+        setProjectedImage(savedSimulation.projectedImage || null);
+        setReady(true);
+        return;
+      }
+
       try {
         const res = await fetch("/api/simulate", {
           method: "POST",
@@ -64,11 +74,21 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         }
         const data = await res.json();
         if (cancelled) return;
+        const simulated = data.projectedScores || baselineConcerns || {};
         setBaselineImage(data.baselineImage || image);
         setProjectedImage(data.projectedImages?.[0] || null);
-        setFinalScores(data.projectedScores || null);
-        setSimulated(data.projectedScores || baselineConcerns || {});
+        setFinalScores(simulated);
+        setSimulated(simulated);
         setReady(true);
+
+        if (typeof onSimulationReady === "function") {
+          onSimulationReady({
+            projectedScores: data.projectedScores || null,
+            projectedImage: data.projectedImages?.[0] || null,
+            baselineImage: data.baselineImage || null,
+            mock: data.mock || false,
+          });
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err.message || "Simulation failed");
@@ -83,7 +103,7 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
     return () => {
       cancelled = true;
     };
-  }, [image, baselineConcerns, totalWeeks]);
+  }, [image, baselineConcerns, totalWeeks, savedSimulation, onSimulationReady]);
 
   const currentScores = useMemo(() => {
     if (!finalScores || week === 0) {

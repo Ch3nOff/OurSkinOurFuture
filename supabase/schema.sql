@@ -16,6 +16,7 @@ create table if not exists public.scans (
   skin_types jsonb default '[]'::jsonb,
   mock boolean default false,
   resize_image text,
+  simulation jsonb default '{}'::jsonb,
   recommendation_text text,
   routine text,
   preferences jsonb,
