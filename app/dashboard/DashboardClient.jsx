@@ -18,6 +18,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  ScanFace,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP, buildRoutine } from "@/lib/skinAnalysis";
@@ -62,6 +63,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
   const [showHistory, setShowHistory] = useState(false);
+  const [viewingHistory, setViewingHistory] = useState(false);
   const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
   const fileInputRef = useRef(null);
 
@@ -78,6 +80,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setImagePreview(dataUrl);
     setAnalysisError(null);
     setValidation({ status: "idle", message: "", hasGlasses: false });
+    setViewingHistory(false);
     setStage("analyzing");
 
     try {
@@ -150,6 +153,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setPlanSource(null);
     setSaveState("idle");
     setValidation({ status: "idle", message: "", hasGlasses: false });
+    setViewingHistory(false);
   }
 
   async function fetchProducts() {
@@ -300,6 +304,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     }
     setStage("results");
     setShowHistory(false);
+    setViewingHistory(true);
   }
 
   async function handleSave() {
@@ -403,46 +408,67 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       <main className="max-w-2xl mx-auto px-5 pb-16">
         {showHistory && (
           <div className="mt-4 rounded-3xl p-5 bg-card border border-border">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-xs font-mono uppercase tracking-widest text-muted">Your past tests</div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <ScanFace size={14} className="text-gold" />
+                <div className="text-xs font-mono uppercase tracking-widest text-muted">Scan Timeline</div>
+              </div>
               <button onClick={() => setShowHistory(false)} className="text-muted hover:text-ink">
                 <X size={14} />
               </button>
             </div>
-            <div className="space-y-2">
-              {history.map((scan) => (
-                <button
-                  key={scan.id}
-                  onClick={() => loadPastScan(scan)}
-                  className="w-full flex items-center gap-3 rounded-2xl p-3 bg-paper border border-border hover:border-gold transition-colors text-left"
-                >
-                  {scan.image_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={scan.image_url} alt="" className="w-10 h-10 rounded-xl object-cover shrink-0" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-xl bg-border shrink-0" />
-                  )}
-                  <div className="min-w-0">
-                    <div className="text-xs font-semibold text-ink">
-                      {new Date(scan.created_at).toLocaleDateString(undefined, {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}{" "}
-                      ·{" "}
-                      {new Date(scan.created_at).toLocaleTimeString(undefined, {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {history.map((scan) => {
+                const top = topConcerns(scan.concern_scores || {}, 1)[0];
+                const score = typeof scan.overall_score === "number" ? scan.overall_score : null;
+                const date = new Date(scan.created_at);
+                const isToday = date.toDateString() === new Date().toDateString();
+                const timeStr = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+                const dateStr = isToday ? "Today" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+                const scoreColor = score == null ? "#9CA3AF" : score >= 70 ? "#4A6355" : score >= 40 ? "#C9A876" : "#B85C4A";
+                return (
+                  <button
+                    key={scan.id}
+                    onClick={() => loadPastScan(scan)}
+                    className="group relative rounded-2xl overflow-hidden bg-paper border border-border hover:border-gold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left"
+                  >
+                    {scan.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={scan.image_url} alt="" className="w-full aspect-[3/4] object-cover" />
+                    ) : (
+                      <div className="w-full aspect-[3/4] bg-border flex items-center justify-center">
+                        <ScanFace size={20} className="text-faint" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    <div className="absolute top-2 right-2">
+                      <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full text-paper" style={{ background: scoreColor }}>
+                        {score != null ? score : "—"}
+                      </span>
                     </div>
-                    <div className="text-[11px] text-faint truncate">
-                      {scan.routine ? "Routine + plan saved" : "Tap to view this test"}
+                    <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                      <div className="text-[11px] font-semibold text-paper truncate">
+                        {dateStr} · {timeStr}
+                      </div>
+                      <div className="text-[10px] text-white/70 truncate">
+                        {top ? `${top.key}: ${top.score}` : scan.mock ? "Demo scan" : "View details"}
+                      </div>
                     </div>
-                  </div>
-                  <ChevronRight size={16} className="ml-auto text-faint shrink-0" />
-                </button>
-              ))}
+                    {scan.mock && (
+                      <div className="absolute top-2 left-2">
+                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-white/80 backdrop-blur">DEMO</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
             </div>
+            {history.length === 0 && (
+              <div className="text-center py-8">
+                <ScanFace size={24} className="text-faint mx-auto mb-2" />
+                <p className="text-xs text-muted">No scans yet. Complete your first analysis to see it here.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -611,22 +637,24 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             </div>
 
             {/* Save button - available immediately on results */}
-            <div className="mb-4">
-              <button
-                onClick={handleSave}
-                disabled={saveState === "saving" || saveState === "saved"}
-                className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
-              >
-                {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
-                {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
-                {saveState === "saving" && "Saving..."}
-                {saveState === "saved" && "Saved ✓"}
-                {saveState === "error" && "Retry Save"}
-              </button>
-              {saveState === "error" && (
-                <p className="text-xs text-clay mt-2 text-center">Couldn't save — check your connection and try again.</p>
-              )}
-            </div>
+            {!viewingHistory && (
+              <div className="mb-4">
+                <button
+                  onClick={handleSave}
+                  disabled={saveState === "saving" || saveState === "saved"}
+                  className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+                >
+                  {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
+                  {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
+                  {saveState === "saving" && "Saving..."}
+                  {saveState === "saved" && "Saved ✓"}
+                  {saveState === "error" && "Retry Save"}
+                </button>
+                {saveState === "error" && (
+                  <p className="text-xs text-clay mt-2 text-center">Couldn't save — check your connection and try again.</p>
+                )}
+              </div>
+            )}
 
             {/* Analysis Summary: overall + per-concern breakdown */}
             <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
