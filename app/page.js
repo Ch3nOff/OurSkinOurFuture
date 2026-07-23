@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Sparkles, ScanFace, FlaskConical, TrendingUp, History } from "lucide-react";
+import { Sparkles, ScanFace, FlaskConical, TrendingUp, History, MessageSquare } from "lucide-react";
 
 const STEPS = [
   {
@@ -99,6 +99,30 @@ export default function LandingPage() {
               Qwen using your exact scan metrics — not a template, but a targeted regimen built from
               your real diagnostic data.
             </p>
+          </div>
+        </section>
+
+        {/* Early beta survey */}
+        <section className="py-10 pb-16">
+          <div className="rounded-3xl p-6 bg-card border border-border">
+            <div className="flex items-center gap-2 mb-2.5">
+              <MessageSquare size={14} className="text-gold" />
+              <span className="text-[11px] font-mono uppercase tracking-widest text-muted">Early Beta</span>
+            </div>
+            <h3 className="text-sm font-semibold mb-1.5 text-ink">Help shape the future of skin intelligence</h3>
+            <p className="text-xs leading-relaxed text-muted mb-4">
+              We’re looking for early beta testers. If you want to try new features and give feedback,
+              fill out the survey and we’ll reach out when spots open.
+            </p>
+            <a
+              href="https://form.typeform.com/to/wxWHgu3T"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-2xl px-5 py-3 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform"
+            >
+              Join Early Beta Survey
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            </a>
           </div>
         </section>
       </main>
