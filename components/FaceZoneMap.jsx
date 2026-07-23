@@ -157,7 +157,7 @@ export default function FaceZoneMap({ image, zones, masks, concerns }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {concernEntries.map(([key, score]) => {
               const maskUrl = masks?.[key];
-              const label = CONCERN_LABELS[key] || key;
+              const label = typeof CONCERN_LABELS[key] === "string" ? CONCERN_LABELS[key] : CONCERN_LABELS[key]?.label || key;
               const isSelected = selectedMask === key;
               return (
                 <button
