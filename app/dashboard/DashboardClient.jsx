@@ -77,6 +77,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [logoError, setLogoError] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [analyzing, setAnalyzing] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -107,11 +108,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   }, [user, lastSavedScanId, simulationResult]);
 
   async function runAnalysis(dataUrl, seed) {
+    if (analyzing) return;
     setImagePreview(dataUrl);
     setAnalysisError(null);
     setValidation({ status: "idle", message: "", hasGlasses: false });
     setViewingHistory(false);
     setStage("analyzing");
+    setAnalyzing(true);
 
     try {
       const res = await fetch("/api/analyze", {
@@ -129,6 +132,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
       setStage("capture");
+    } finally {
+      setAnalyzing(false);
     }
   }
 
@@ -650,9 +655,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   const seed = imagePreview.length + Date.now();
                   runAnalysis(imagePreview, seed);
                 }}
-                className="flex-1 rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform"
+                disabled={analyzing}
+                className="flex-1 rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
               >
-                Continue to Analysis
+                {analyzing ? "Analyzing..." : "Continue to Analysis"}
               </button>
             </div>
           </div>
@@ -1220,21 +1226,23 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             )}
 
             <div className="flex gap-2.5">
-              <button
-                onClick={handleSave}
-                disabled={saveState === "saving" || saveState === "saved"}
-                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
-              >
-                {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
-                {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
-                {saveState === "saving" && "Saving..."}
-                {saveState === "saved" && "Saved ✓"}
-                {saveState === "error" && "Retry Save"}
-              </button>
+              {!viewingHistory && (
+                <button
+                  onClick={handleSave}
+                  disabled={saveState === "saving" || saveState === "saved"}
+                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+                >
+                  {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
+                  {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
+                  {saveState === "saving" && "Saving..."}
+                  {saveState === "saved" && "Saved ✓"}
+                  {saveState === "error" && "Retry Save"}
+                </button>
+              )}
               <button
                 onClick={downloadScanReport}
                 disabled={!analysis}
-                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50"
+                className={`${viewingHistory ? "flex-1" : "flex-1"} rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50`}
               >
                 <Download size={15} />
                 Download
@@ -1247,7 +1255,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 <ChevronRight size={16} />
               </button>
             </div>
-            {saveState === "error" && (
+            {saveState === "error" && !viewingHistory && (
               <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
             )}
           </div>
