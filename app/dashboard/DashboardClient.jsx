@@ -23,14 +23,11 @@ import IngredientCard from "@/components/IngredientCard";
 import TimelineSlider from "@/components/TimelineSlider";
 import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
-import SkinHealthDashboard from "@/components/SkinHealthDashboard";
-import ManualCrop from "@/components/ManualCrop";
-import { detectPhotoType } from "@/lib/imageUtils";
+import { cropToFaceZone } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
-  const [stage, setStage] = useState("capture"); // capture | camera | crop | analyzing | results | routine
+  const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results
   const [imagePreview, setImagePreview] = useState(null);
-  const [cropImage, setCropImage] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
@@ -40,15 +37,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState(null);
   const [productsSlugs, setProductsSlugs] = useState([]);
-
-  const [tryOnResult, setTryOnResult] = useState(null);
-  const [tryOnLoading, setTryOnLoading] = useState(false);
-  const [tryOnError, setTryOnError] = useState(null);
-  const [showOriginal, setShowOriginal] = useState(false);
-
-  const [garments, setGarments] = useState([]);
-  const [selectedGarment, setSelectedGarment] = useState(null);
-  const [garmentLoading, setGarmentLoading] = useState(false);
 
   const [routine, setRoutine] = useState("");
   const [prefs, setPrefs] = useState({
@@ -69,7 +57,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
   const [showHistory, setShowHistory] = useState(false);
-  const [photoType, setPhotoType] = useState(null);
   const fileInputRef = useRef(null);
 
   const supabase = createClient();
@@ -86,39 +73,25 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   async function runAnalysis(dataUrl, seed) {
     setImagePreview(dataUrl);
     setAnalysisError(null);
-    setStage("crop");
-    setPhotoType(null);
-  }
-
-  async function handleCropConfirm(croppedFaceUrl) {
     setStage("analyzing");
-    setPhotoType(null);
 
     try {
-      const res = await fetch("/api/analyze-and-style", {
+      const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: imagePreview, faceImage: croppedFaceUrl, userId: user?.id }),
+        body: JSON.stringify({ image: dataUrl, seed }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
         throw new Error(result.error || "Analysis failed");
       }
-      setAnalysis(result.analysis);
-      setTryOnResult(result.tryOnImage ? { tryOnImage: result.tryOnImage, recommendation: result.recommendation, mock: result.mock } : null);
+      setAnalysis(result);
       setStage("results");
-      fetchGarments();
     } catch (err) {
       console.error("Analysis flow failed:", err);
       setAnalysisError(err.message || "Analysis failed. Please try again.");
       setStage("capture");
     }
-  }
-
-  function handleCropCancel() {
-    setCropImage(null);
-    setImagePreview(null);
-    setStage("capture");
   }
 
   const handleFile = useCallback((file) => {
@@ -145,7 +118,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   function reset() {
     setStage("capture");
     setImagePreview(null);
-    setCropImage(null);
     setAnalysis(null);
     setAnalysisError(null);
     setRecommendation(null);
@@ -155,14 +127,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setProductsLoading(false);
     setProductsError(null);
     setProductsSlugs([]);
-    setTryOnResult(null);
-    setTryOnLoading(false);
-    setTryOnError(null);
-    setShowOriginal(false);
-    setGarments([]);
-    setSelectedGarment(null);
-    setGarmentLoading(false);
-    setPhotoType(null);
     setProgressReview(null);
     setProgressLoading(false);
     setRoutine("");
@@ -266,31 +230,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setProgressReview(`Review unavailable: ${err.message || "Failed to generate review."}`);
     } finally {
       setProgressLoading(false);
-    }
-  }
-
-  async function fetchGarments() {
-    if (!analysis) return;
-    setGarmentLoading(true);
-    setSelectedGarment(null);
-    setTryOnResult(null);
-    try {
-      const topConcernKeys = Object.entries(analysis.concerns || {})
-        .filter(([, s]) => typeof s === "number" && s >= 31)
-        .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
-        .slice(0, 3)
-        .map(([key]) => key);
-
-      const undertone = analysis.skinTypes?.[0]?.skinType === "Oily" ? "warm" : "neutral";
-      const res = await fetch(`/api/try-on?undertone=${encodeURIComponent(undertone)}&concerns=${encodeURIComponent(topConcernKeys.join(","))}`);
-      const data = await res.json();
-      if (data.garments) {
-        setGarments(data.garments);
-      }
-    } catch (err) {
-      console.error("Failed to fetch garments:", err);
-    } finally {
-      setGarmentLoading(false);
     }
   }
 
@@ -516,6 +455,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               />
             </div>
 
+            <div className="relative rounded-2xl overflow-hidden border border-border bg-paper mb-4 aspect-[4/5] max-w-xs mx-auto">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-40 rounded-[50%] border-2 border-dashed border-gold/60 flex items-center justify-center">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted text-center px-2">Center your face here</span>
+                </div>
+              </div>
+            </div>
+
             <p className="text-[11px] text-center mb-6 text-faint">
               For the most accurate read, using your camera performs better than uploading an existing photo —
               live capture avoids compression and lighting shifts from prior edits.
@@ -534,16 +481,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         {stage === "camera" && (
           <div className="mt-6">
             <CameraCapture onCapture={handleCameraCapture} onClose={() => setStage("capture")} />
-          </div>
-        )}
-
-        {stage === "crop" && imagePreview && (
-          <div className="mt-6">
-            <ManualCrop
-              image={imagePreview}
-              onConfirm={handleCropConfirm}
-              onCancel={handleCropCancel}
-            />
           </div>
         )}
 
@@ -698,8 +635,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               );
             })()}
 
-            <SkinHealthDashboard analysis={analysis} />
-
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
               <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} concerns={analysis.concerns} />
@@ -817,54 +752,28 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             })()}
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Color Harmony</div>
-              <p className="text-[11px] text-muted mb-3">Based on your undertone and active concerns, these hues will complement your complexion.</p>
-              <div className="flex gap-3">
-                {[ "#2E8B57", "#3B5998", "#D4A5A5", "#E2725B", "#36454F" ].map((hex, i) => (
-                  <div key={i} className="flex flex-col items-center gap-1.5">
-                    <div className="w-10 h-10 rounded-full border-2 border-border shadow-sm" style={{ background: hex }} title={hex} />
-                    <span className="text-[10px] font-mono text-muted">{hex}</span>
+              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Routine</div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {[
+                  { label: "Morning", steps: routine.morning, icon: "☀️" },
+                  { label: "Evening", steps: routine.evening, icon: "🌙" },
+                  { label: "Weekly", steps: routine.weekly, icon: "📅" },
+                ].map((slot) => (
+                  <div key={slot.label} className="rounded-2xl p-3 bg-paper border border-border">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm leading-none">{slot.icon}</span>
+                      <span className="text-[11px] font-mono uppercase tracking-widest text-muted">{slot.label}</span>
+                    </div>
+                    <ul className="space-y-1.5">
+                      {slot.steps.map((step, i) => (
+                        <li key={i} className="text-[11px] text-ink leading-relaxed flex gap-1.5">
+                          <span className="text-muted">·</span>
+                          <span>{step}</span>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 ))}
-              </div>
-            </section>
-
-            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Skin Condition Radar</div>
-              <div className="flex items-center justify-center">
-                <svg viewBox="0 0 200 200" className="w-48 h-48">
-                  <polygon points="100,20 180,75 150,160 50,160 20,75" fill="none" stroke="#F0EBDD" strokeWidth="1" />
-                  <polygon points="100,50 150,80 130,130 70,130 50,80" fill="none" stroke="#F0EBDD" strokeWidth="1" />
-                  {(() => {
-                    const items = topConcerns(analysis.concerns, 5);
-                    if (items.length === 0) return null;
-                    const cx = 100, cy = 90, r = 65;
-                    const angleStep = (2 * Math.PI) / items.length;
-                    const startAngle = -Math.PI / 2;
-                    const pts = items.map((c, i) => {
-                      const angle = startAngle + i * angleStep;
-                      const dist = (Math.min(100, Math.max(0, c.score)) / 100) * r;
-                      return `${cx + dist * Math.cos(angle)},${cy + dist * Math.sin(angle)}`;
-                    }).join(" ");
-                    return <polygon points={pts} fill="rgba(201,168,118,0.25)" stroke="#C9A876" strokeWidth="2" strokeLinejoin="round" />;
-                  })()}
-                  {topConcerns(analysis.concerns, 5).map((c, i) => {
-                    const cx = 100, cy = 90, r = 65;
-                    const angleStep = (2 * Math.PI) / 5;
-                    const startAngle = -Math.PI / 2;
-                    const angle = startAngle + i * angleStep;
-                    const x = cx + r * Math.cos(angle);
-                    const y = cy + r * Math.sin(angle);
-                    return (
-                      <g key={c.key}>
-                        <circle cx={x} cy={y} r="3" fill="#C9A876" />
-                        <text x={x + (Math.cos(angle) > 0 ? 6 : -6)} y={y + 3} textAnchor={Math.cos(angle) > 0 ? "start" : "end"} className="text-[8px] fill-muted">
-                          {(typeof CONCERN_LABELS[c.key] === "string" ? CONCERN_LABELS[c.key] : CONCERN_LABELS[c.key]?.label || c.key)}
-                        </text>
-                      </g>
-                    );
-                  })}
-                </svg>
               </div>
             </section>
 
@@ -946,102 +855,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Treatment Simulation</div>
               <TimelineSlider image={imagePreview} baselineConcerns={analysis.concerns} totalWeeks={12} />
-            </section>
-
-            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Style Try-On</div>
-              {tryOnResult ? (
-                <div className="space-y-3">
-                  <div className="rounded-2xl overflow-hidden border border-border bg-paper relative">
-                    <img
-                      src={showOriginal ? imagePreview : tryOnResult.tryOnImage}
-                      alt={showOriginal ? "Original" : "Try-on result"}
-                      className="w-full aspect-[3/4] object-contain"
-                      style={{ background: "#FDFBF6" }}
-                    />
-                    {tryOnResult.mock && (
-                      <span className="absolute top-2 right-2 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-ink/80 text-paper backdrop-blur-sm">
-                        Demo Preview
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowOriginal(false)}
-                      className={`flex-1 rounded-2xl py-2.5 text-xs font-semibold border transition-colors ${!showOriginal ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-border"}`}
-                    >
-                      Try-On Result
-                    </button>
-                    <button
-                      onClick={() => setShowOriginal(true)}
-                      className={`flex-1 rounded-2xl py-2.5 text-xs font-semibold border transition-colors ${showOriginal ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-border"}`}
-                    >
-                      Original Photo
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => { setTryOnResult(null); setTryOnError(null); setShowOriginal(false); }}
-                    className="w-full rounded-2xl py-2.5 text-xs font-semibold bg-paper text-ink border border-border active:scale-[0.98] transition-transform"
-                  >
-                    Back to wardrobe
-                  </button>
-                </div>
-              ) : garmentLoading ? (
-                <div className="text-center py-6">
-                  <Loader2 size={18} className="animate-spin mx-auto mb-2 text-muted" />
-                  <p className="text-xs text-faint">Curating color-harmonized wardrobe...</p>
-                </div>
-              ) : garments.length > 0 ? (
-                <div className="space-y-3">
-                  <p className="text-[11px] text-muted mb-2">Color-matched to your undertone & current concerns</p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {garments.map((g) => (
-                      <button
-                        key={g.id}
-                        onClick={async () => {
-                          setSelectedGarment(g);
-                          setTryOnLoading(true);
-                          setTryOnError(null);
-                          try {
-                            const res = await fetch("/api/try-on", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                userImage: imagePreview,
-                                garmentImage: g.imageUrl,
-                                category: g.category,
-                                skinTone: "neutral",
-                              }),
-                            });
-                            const data = await res.json();
-                            if (data.error) {
-                              setTryOnError(data.error);
-                            } else {
-                              setTryOnResult(data);
-                            }
-                          } catch (err) {
-                            setTryOnError(err.message || "Try-on failed");
-                          } finally {
-                            setTryOnLoading(false);
-                          }
-                        }}
-                        disabled={tryOnLoading}
-                        className="group rounded-2xl overflow-hidden border border-border bg-paper active:scale-[0.98] transition-all duration-200 disabled:opacity-50 text-left hover:shadow-lg hover:border-[#C9A876]/40 hover:-translate-y-0.5"
-                      >
-                        <div className="aspect-[3/4] relative">
-                          <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                          <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
-                            <p className="text-[10px] font-medium text-white">{g.name}</p>
-                            <p className="text-[9px] text-white/80">{g.reason}</p>
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-6 text-faint text-xs">Color-matched outfits will appear here after your scan</div>
-              )}
             </section>
 
             <div className="mb-4">
