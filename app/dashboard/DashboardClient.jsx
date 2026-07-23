@@ -785,32 +785,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               );
             })()}
 
-            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Routine</div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {[
-                  { label: "Morning", steps: routine.morning, icon: "☀️" },
-                  { label: "Evening", steps: routine.evening, icon: "🌙" },
-                  { label: "Weekly", steps: routine.weekly, icon: "📅" },
-                ].map((slot) => (
-                  <div key={slot.label} className="rounded-2xl p-3 bg-paper border border-border">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-sm leading-none">{slot.icon}</span>
-                      <span className="text-[11px] font-mono uppercase tracking-widest text-muted">{slot.label}</span>
-                    </div>
-                    <ul className="space-y-1.5">
-                      {slot.steps.map((step, i) => (
-                        <li key={i} className="text-[11px] text-ink leading-relaxed flex gap-1.5">
-                          <span className="text-muted">·</span>
-                          <span>{step}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             {analysis?.concerns && (() => {
               const routine = buildRoutine(analysis.concerns);
               return (
