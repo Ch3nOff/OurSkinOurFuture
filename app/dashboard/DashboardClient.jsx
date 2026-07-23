@@ -57,6 +57,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [progressReview, setProgressReview] = useState(null);
   const [progressLoading, setProgressLoading] = useState(false);
 
+  const supabase = createClient();
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);

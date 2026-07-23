@@ -46,7 +46,7 @@ export default function FaceGuide({ image, onValidate }) {
         setMessage("Good lighting detected.");
       }
 
-      const hasGlasses = await detectGlasses(img);
+      const hasGlasses = await detectGlasses(img, dataUrl);
       if (hasGlasses) {
         setGlassesDetected(true);
         setMessage((prev) => prev + " Glasses detected — please remove them for accurate skin analysis.");
@@ -56,7 +56,7 @@ export default function FaceGuide({ image, onValidate }) {
       }
 
       if (onValidate) {
-        onValidate({ ok: status !== "error", glassesDetected: hasGlasses, brightness });
+        onValidate({ status, message, hasGlasses });
       }
     } catch {
       setStatus("error");
