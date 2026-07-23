@@ -72,6 +72,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [lastSavedScanId, setLastSavedScanId] = useState(null);
   const [concernPage, setConcernPage] = useState(0);
   const [zoomedImage, setZoomedImage] = useState(null);
+  const [logoError, setLogoError] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -401,12 +402,22 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   return (
     <div className="min-h-screen w-full bg-paper">
       {/* Header */}
-      <header className="max-w-2xl mx-auto px-5 pt-8 pb-2 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-ink">
-            <Sparkles size={14} color="#C9A876" />
-          </div>
-            <span className="text-sm font-semibold tracking-tight text-ink">
+      <header className="max-w-2xl mx-auto px-5 pt-8 pb-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3">
+          {!logoError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src="/logo.png"
+              alt="OurSkinOurFuture"
+              className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-border"
+              onError={() => setLogoError(true)}
+            />
+          ) : (
+            <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-ink">
+              <Sparkles size={18} color="#C9A876" />
+            </div>
+          )}
+          <span className="text-base font-semibold tracking-tight text-ink">
             Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
           </span>
         </Link>
@@ -799,13 +810,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             </section>
 
             {(analysis.overall != null || analysis.skinAge != null || analysis.skinTypes?.length) && (
-              <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
-                <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Skin Profile</div>
-                <div className="flex flex-wrap gap-4">
+              <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
+                <div className="text-xs font-mono uppercase tracking-widest mb-5 text-muted">Your Skin Profile</div>
+                <div className="flex flex-wrap gap-5">
                   {/* Skin health ring */}
                   {analysis.overall != null && (
-                    <div className="flex flex-col items-center gap-1">
-                      <svg width="72" height="72" viewBox="0 0 72 72">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <svg width="80" height="80" viewBox="0 0 72 72">
                         <circle cx="36" cy="36" r="30" fill="none" stroke="#F0EBDD" strokeWidth="6" />
                         <circle
                           cx="36"
@@ -827,15 +838,15 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     </div>
                   )}
                   {analysis.skinAge != null && (
-                    <div>
+                    <div className="flex flex-col justify-center">
                       <div className="text-2xl font-semibold text-ink">{analysis.skinAge}</div>
                       <div className="text-[11px] text-muted">Skin age</div>
                     </div>
                   )}
                   {analysis.skinTypes?.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 items-center">
                       {analysis.skinTypes.map((st, i) => (
-                        <span key={i} className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
+                        <span key={i} className="text-xs font-medium px-2.5 py-1 rounded-full bg-[#F0EBDD] text-[#6B5D42]">
                           {st.region === "whole" ? "Skin" : st.region.replace("_", " ")}: {st.skinType}
                         </span>
                       ))}
