@@ -635,9 +635,11 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteScan(scan.id);
+                            if (confirm("Delete this scan? This cannot be undone.")) {
+                              deleteScan(scan.id);
+                            }
                           }}
-                          className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-clay/90 text-paper flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute bottom-12 right-2 z-10 w-8 h-8 rounded-full bg-clay/90 text-paper flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           aria-label="Delete scan"
                         >
                           <Trash2 size={14} />
@@ -702,7 +704,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   const seed = imagePreview.length + Date.now();
                   runAnalysis(imagePreview, seed);
                 }}
-                disabled={analyzing}
+                disabled={analyzing || validation.status === "idle" || validation.status === "checking"}
                 className={`flex-1 rounded-2xl py-3 text-xs font-semibold active:scale-[0.98] transition-transform disabled:opacity-70 ${
                   validation.hasGlasses && glassesConfirmStep === 0
                     ? "bg-gold text-paper"
@@ -1338,12 +1340,12 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </section>
             )}
 
-            <div className="flex gap-2.5">
+            <div className="flex flex-wrap gap-2.5">
               {!viewingHistory && (
                 <button
                   onClick={handleSave}
                   disabled={saveState === "saving" || saveState === "saved"}
-                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70 min-w-[120px]"
                 >
                   {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
                   {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
@@ -1355,15 +1357,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               <button
                 onClick={downloadScanReport}
                 disabled={!analysis}
-                className={`${viewingHistory ? "flex-1" : "flex-1"} rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50`}
+                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50 min-w-[120px]"
               >
                 <Download size={15} />
                 Download
               </button>
               {viewingHistory && lastSavedScanId && (
                 <button
-                  onClick={() => deleteScan(lastSavedScanId)}
-                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-clay text-paper active:scale-[0.98] transition-transform"
+                  onClick={() => {
+                    if (confirm("Delete this scan? This cannot be undone.")) {
+                      deleteScan(lastSavedScanId);
+                    }
+                  }}
+                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-clay text-paper active:scale-[0.98] transition-transform min-w-[120px]"
                 >
                   <Trash2 size={15} />
                   Delete
@@ -1371,7 +1377,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               )}
               <button
                 onClick={reset}
-                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform"
+                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform min-w-[120px]"
               >
                 Scan Another
                 <ChevronRight size={16} />
