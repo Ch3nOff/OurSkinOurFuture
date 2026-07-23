@@ -33,7 +33,6 @@ import TimelineSlider from "@/components/TimelineSlider";
 import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
 import FaceGuide from "@/components/FaceGuide";
-import { cropToFaceZone } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
   const [stage, setStage] = useState("capture"); // capture | camera | validate | analyzing | results | routine
