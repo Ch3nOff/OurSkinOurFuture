@@ -41,7 +41,7 @@ function maskZone(url) {
   return "leftCheek";
 }
 
-export default function FaceZoneMap({ image, zones, masks, concerns }) {
+export default function FaceZoneMap({ image, zones, masks, concerns, onImageClick }) {
   const [hoveredZone, setHoveredZone] = useState(null);
   const [showMasks, setShowMasks] = useState(true);
   const [selectedMask, setSelectedMask] = useState(null);
@@ -62,8 +62,9 @@ export default function FaceZoneMap({ image, zones, masks, concerns }) {
           <img
             src={image}
             alt="Scan"
-            className="w-full aspect-[3/4] object-contain"
+            className="w-full aspect-[3/4] object-contain cursor-zoom-in"
             style={{ background: "#FDFBF6" }}
+            onClick={() => onImageClick?.(image)}
           />
         )}
 
@@ -169,7 +170,15 @@ export default function FaceZoneMap({ image, zones, masks, concerns }) {
                 >
                   {maskUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={maskUrl} alt="" className="w-full aspect-square object-cover rounded-lg mb-1.5 opacity-80" />
+                    <img
+                      src={maskUrl}
+                      alt=""
+                      className="w-full aspect-square object-cover rounded-lg mb-1.5 opacity-80 cursor-zoom-in"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onImageClick?.(maskUrl);
+                      }}
+                    />
                   ) : (
                     <div className="w-full aspect-square rounded-lg bg-paper mb-1.5 flex items-center justify-center">
                       <span className="text-lg font-semibold text-muted">{score}</span>

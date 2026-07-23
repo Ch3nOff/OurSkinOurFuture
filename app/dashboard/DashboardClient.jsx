@@ -6,6 +6,8 @@ import {
   Camera,
   Upload,
   ChevronRight,
+  ChevronLeft,
+  ZoomIn,
   Sparkles,
   AlertCircle,
   X,
@@ -68,6 +70,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
   const [simulationResult, setSimulationResult] = useState(null);
   const [lastSavedScanId, setLastSavedScanId] = useState(null);
+  const [concernPage, setConcernPage] = useState(0);
+  const [zoomedImage, setZoomedImage] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -178,6 +182,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setViewingHistory(false);
     setSimulationResult(null);
     setLastSavedScanId(null);
+    setConcernPage(0);
+    setZoomedImage(null);
   }
 
   async function fetchProducts() {
@@ -588,7 +594,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         {stage === "validate" && imagePreview && (
           <div className="mt-6 space-y-4">
             <div className="rounded-2xl overflow-hidden border border-border bg-paper aspect-[3/4] max-w-xs mx-auto">
-              <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" style={{ background: "#FDFBF6" }} />
+              <img
+                src={imagePreview}
+                alt="Preview"
+                className="w-full h-full object-contain cursor-zoom-in"
+                style={{ background: "#FDFBF6" }}
+                onClick={() => setZoomedImage(imagePreview)}
+              />
             </div>
 
             <FaceGuide image={imagePreview} onValidate={setValidation} />
@@ -648,7 +660,12 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               <div className="flex items-center gap-3">
                 {imagePreview && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={imagePreview} alt="Scan result" className="w-11 h-11 rounded-xl object-cover border border-border" />
+                  <img
+                    src={imagePreview}
+                    alt="Scan result"
+                    className="w-11 h-11 rounded-xl object-cover border border-border cursor-zoom-in"
+                    onClick={() => setZoomedImage(imagePreview)}
+                  />
                 )}
                 <div>
                   <div className="text-sm font-semibold text-ink">Diagnostic Results</div>
@@ -778,7 +795,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
                <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Zone Diagnostic Map</div>
-              <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} concerns={analysis.concerns} />
+               <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} concerns={analysis.concerns} onImageClick={setZoomedImage} />
             </section>
 
             {(analysis.overall != null || analysis.skinAge != null || analysis.skinTypes?.length) && (
@@ -848,27 +865,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </section>
             )}
 
-            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Concern Severity</div>
-              <div className="space-y-3">
-                {topConcerns(analysis.concerns, 5).map((c) => {
-                  const pct = Math.min(100, Math.max(0, c.score));
-                  const color = pct >= 61 ? "bg-[#B85C4A]" : pct >= 31 ? "bg-[#C9A876]" : "bg-[#4A6355]";
-                  return (
-                    <div key={c.key}>
-                      <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-medium text-ink">{(typeof CONCERN_LABELS[c.key] === "string" ? CONCERN_LABELS[c.key] : CONCERN_LABELS[c.key]?.label || c.key)}{c.icon ? ` ${c.icon}` : ""}</span>
-                        <span className="text-[11px] font-mono text-muted">{pct}</span>
-                      </div>
-                      <div className="h-1.5 rounded-full bg-[#F0EBDD] overflow-hidden">
-                        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-
             {(() => {
               const top = topConcerns(analysis.concerns, 3);
               if (top.length === 0) return null;
@@ -893,32 +889,57 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             })()}
 
             {analysis?.concerns && (() => {
-              const routine = buildRoutine(analysis.concerns);
+              const allConcerns = topConcerns(analysis.concerns, 50);
+              const PER_PAGE = 5;
+              const totalPages = Math.max(1, Math.ceil(allConcerns.length / PER_PAGE));
+              const safePage = Math.min(concernPage, totalPages - 1);
+              const pageConcerns = allConcerns.slice(safePage * PER_PAGE, safePage * PER_PAGE + PER_PAGE);
+
               return (
-                <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-                  <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Protocol</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[
-                      { label: "Morning", steps: routine.morning, icon: "☀️" },
-                      { label: "Evening", steps: routine.evening, icon: "🌙" },
-                      { label: "Weekly", steps: routine.weekly, icon: "📅" },
-                    ].map((slot) => (
-                      <div key={slot.label} className="rounded-2xl p-3 bg-paper border border-border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-sm leading-none">{slot.icon}</span>
-                          <span className="text-[11px] font-mono uppercase tracking-widest text-muted">{slot.label}</span>
+                <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
+                  <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Concern Severity</div>
+                  <div className="space-y-3">
+                    {pageConcerns.map((c) => {
+                      const pct = Math.min(100, Math.max(0, c.score));
+                      const color = pct >= 61 ? "bg-[#B85C4A]" : pct >= 31 ? "bg-[#C9A876]" : "bg-[#4A6355]";
+                      return (
+                        <div key={c.key}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-ink">
+                              {(typeof CONCERN_LABELS[c.key] === "string" ? CONCERN_LABELS[c.key] : CONCERN_LABELS[c.key]?.label || c.key)}
+                              {c.icon ? ` ${c.icon}` : ""}
+                            </span>
+                            <span className="text-[11px] font-mono text-muted">{pct}</span>
+                          </div>
+                          <div className="h-1.5 rounded-full bg-[#F0EBDD] overflow-hidden">
+                            <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+                          </div>
                         </div>
-                        <ul className="space-y-1.5">
-                          {slot.steps.map((step, i) => (
-                            <li key={i} className="text-[11px] text-ink leading-relaxed flex gap-1.5">
-                              <span className="text-muted">·</span>
-                              <span>{step}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
+
+                  {allConcerns.length > PER_PAGE && (
+                    <div className="flex items-center justify-between mt-4">
+                      <button
+                        onClick={() => setConcernPage((p) => Math.max(0, p - 1))}
+                        disabled={safePage === 0}
+                        className="flex items-center gap-1 text-[11px] font-mono text-muted hover:text-ink disabled:opacity-40"
+                      >
+                        <ChevronLeft size={14} /> Prev
+                      </button>
+                      <span className="text-[10px] font-mono text-muted">
+                        {safePage + 1} / {totalPages}
+                      </span>
+                      <button
+                        onClick={() => setConcernPage((p) => Math.min(totalPages - 1, p + 1))}
+                        disabled={safePage >= totalPages - 1}
+                        className="flex items-center gap-1 text-[11px] font-mono text-muted hover:text-ink disabled:opacity-40"
+                      >
+                        Next <ChevronRight size={14} />
+                      </button>
+                    </div>
+                  )}
                 </section>
               );
             })()}
@@ -1202,11 +1223,33 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
             )}
           </div>
+            )}
+        </main>
+
+        {/* Zoom lightbox */}
+        {zoomedImage && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setZoomedImage(null)}
+          >
+            <button
+              onClick={() => setZoomedImage(null)}
+              className="absolute top-4 right-4 text-white/80 hover:text-white"
+              aria-label="Close zoom"
+            >
+              <X size={24} />
+            </button>
+            <img
+              src={zoomedImage}
+              alt="Zoomed"
+              className="max-w-full max-h-full object-contain rounded-2xl"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
         )}
-      </main>
-    </div>
-  );
-}
+      </div>
+    );
+  }
 
 function RoutineField({ label, value, onChange, placeholder }) {
   return (
