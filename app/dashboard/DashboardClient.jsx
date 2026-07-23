@@ -24,11 +24,13 @@ import TimelineSlider from "@/components/TimelineSlider";
 import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
 import SkinHealthDashboard from "@/components/SkinHealthDashboard";
+import ManualCrop from "@/components/ManualCrop";
 import { detectPhotoType } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
-  const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results | routine
+  const [stage, setStage] = useState("capture"); // capture | camera | crop | analyzing | results | routine
   const [imagePreview, setImagePreview] = useState(null);
+  const [cropImage, setCropImage] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
@@ -84,24 +86,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   async function runAnalysis(dataUrl, seed) {
     setImagePreview(dataUrl);
     setAnalysisError(null);
+    setStage("crop");
+    setPhotoType(null);
+  }
+
+  async function handleCropConfirm(croppedFaceUrl) {
     setStage("analyzing");
     setPhotoType(null);
 
     try {
-      const detected = await detectPhotoType(dataUrl);
-      setPhotoType(detected);
-
-      let faceImage = dataUrl;
-      try {
-        faceImage = await cropToFaceZone(dataUrl);
-      } catch (e) {
-        console.warn("Face crop failed, using full image:", e);
-      }
-
       const res = await fetch("/api/analyze-and-style", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: dataUrl, faceImage, seed, style: "casual", season: "all", userId: user?.id }),
+        body: JSON.stringify({ image: imagePreview, faceImage: croppedFaceUrl, userId: user?.id }),
       });
       const result = await res.json();
       if (!res.ok || result.error) {
@@ -116,6 +113,12 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setAnalysisError(err.message || "Analysis failed. Please try again.");
       setStage("capture");
     }
+  }
+
+  function handleCropCancel() {
+    setCropImage(null);
+    setImagePreview(null);
+    setStage("capture");
   }
 
   const handleFile = useCallback((file) => {
@@ -142,6 +145,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   function reset() {
     setStage("capture");
     setImagePreview(null);
+    setCropImage(null);
     setAnalysis(null);
     setAnalysisError(null);
     setRecommendation(null);
@@ -530,6 +534,16 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         {stage === "camera" && (
           <div className="mt-6">
             <CameraCapture onCapture={handleCameraCapture} onClose={() => setStage("capture")} />
+          </div>
+        )}
+
+        {stage === "crop" && imagePreview && (
+          <div className="mt-6">
+            <ManualCrop
+              image={imagePreview}
+              onConfirm={handleCropConfirm}
+              onCancel={handleCropCancel}
+            />
           </div>
         )}
 
