@@ -203,27 +203,134 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
   function downloadScanReport() {
     if (!analysis) return;
-    const report = {
-      exportedAt: new Date().toISOString(),
-      source: analysis.mock ? "Demo model" : "YouCam Skin Analysis",
-      imageUrl: imagePreview || null,
-      concerns: analysis.concerns || {},
-      zones: analysis.zones || {},
-      masks: analysis.masks || {},
-      overall: analysis.overall ?? null,
-      skinAge: analysis.skinAge ?? null,
-      skinTypes: analysis.skinTypes || [],
-      simulation: simulationResult || null,
-      recommendation: recommendation || null,
-      routine: routine || null,
-      preferences: prefs || null,
-      plan: plan || null,
-    };
-    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const timeStr = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+
+    const concernsHtml = Object.entries(analysis.concerns || {})
+      .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+      .map(([key, score]) => {
+        const label = typeof CONCERN_LABELS[key] === "string" ? CONCERN_LABELS[key] : CONCERN_LABELS[key]?.label || key;
+        const pct = Math.min(100, Math.max(0, score));
+        const color = pct >= 61 ? "#B85C4A" : pct >= 31 ? "#C9A876" : "#4A6355";
+        return `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#1A1A1A;font-size:13px;">${label}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;text-align:right;font-weight:600;color:${color};font-size:13px;">${pct}/100</td>
+        </tr>`;
+      }).join("");
+
+    const zonesHtml = Object.entries(analysis.zones || {})
+      .map(([key, score]) => {
+        const label = ZONE_LABELS[key] || key;
+        return `<tr>
+          <td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#1A1A1A;font-size:13px;">${label}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;text-align:right;font-weight:600;color:#1A1A1A;font-size:13px;">${score}/100</td>
+        </tr>`;
+      }).join("");
+
+    const skinTypesHtml = (analysis.skinTypes || []).map(st => {
+      const region = st.region === "whole" ? "Skin" : st.region.replace("_", " ");
+      return `<span style="display:inline-block;padding:4px 10px;border-radius:999px;background:#F0EBDD;color:#6B5D42;font-size:12px;margin:2px;">${region}: ${st.skinType}</span>`;
+    }).join(" ");
+
+    const simulationText = simulationResult
+      ? Object.entries(simulationResult.projectedScores || simulationResult.scores || {})
+          .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
+          .slice(0, 5)
+          .map(([k, v]) => `${typeof CONCERN_LABELS[k] === "string" ? CONCERN_LABELS[k] : CONCERN_LABELS[k]?.label || k}: ${Math.round(v)}/100`)
+          .join("<br/>")
+      : "Not generated";
+
+    const html = `<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Skin Analysis Report - ${dateStr}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #1A1A1A; margin: 0; padding: 24px; background: #fff; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    .header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+    .logo { width: 48px; height: 48px; border-radius: 12px; background: #1A1A1A; display: flex; align-items: center; justify-content: center; color: #C9A876; font-weight: 700; font-size: 18px; }
+    .title { font-size: 20px; font-weight: 700; letter-spacing: -0.2px; }
+    .subtitle { font-size: 12px; color: #6B5D42; margin-top: 2px; }
+    .card { border: 1px solid #F0EBDD; border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+    .section { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #6B5D42; margin-bottom: 10px; }
+    .meta { font-size: 12px; color: #6B5D42; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; }
+    .footer { font-size: 11px; color: #6B5D42; margin-top: 8px; }
+    .actions { margin-top: 18px; text-align: right; }
+    .actions button { padding: 10px 14px; border-radius: 12px; border: 1px solid #1A1A1A; background: #1A1A1A; color: #fff; font-size: 12px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <div class="logo">OS</div>
+      <div>
+        <div class="title">OurSkinOurFuture</div>
+        <div class="subtitle">Clinical Skin Analysis Report</div>
+      </div>
+    </div>
+
+    <div class="meta">Exported: ${dateStr} at ${timeStr} · Source: ${analysis.mock ? "Demo model" : "YouCam Skin Analysis"}</div>
+
+    <div class="card">
+      <div class="section">Overview</div>
+      <table>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#1A1A1A;font-size:13px;">Overall Score</td><td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;text-align:right;font-weight:700;font-size:13px;">${analysis.overall ?? "—"}/100</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#1A1A1A;font-size:13px;">Skin Age</td><td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;text-align:right;font-weight:700;font-size:13px;">${analysis.skinAge ?? "—"}</td></tr>
+        <tr><td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#1A1A1A;font-size:13px;">Skin Types</td><td style="padding:8px 12px;border-bottom:1px solid #F0EBDD;text-align:right;font-size:13px;">${skinTypesHtml || "—"}</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section">Concern Severity</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#6B5D42;font-size:11px;font-weight:600;">Concern</th>
+            <th style="text-align:right;padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#6B5D42;font-size:11px;font-weight:600;">Score</th>
+          </tr>
+        </thead>
+        <tbody>${concernsHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section">Zone Scores</div>
+      <table>
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#6B5D42;font-size:11px;font-weight:600;">Zone</th>
+            <th style="text-align:right;padding:8px 12px;border-bottom:1px solid #F0EBDD;color:#6B5D42;font-size:11px;font-weight:600;">Score</th>
+          </tr>
+        </thead>
+        <tbody>${zonesHtml}</tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="section">Treatment Simulation</div>
+      <div style="font-size:13px;color:#1A1A1A;line-height:1.6;">${simulationText}</div>
+    </div>
+
+    ${recommendation ? `<div class="card"><div class="section">Personal Note</div><p style="font-size:13px;color:#1A1A1A;line-height:1.6;white-space:pre-line;">${recommendation.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p></div>` : ""}
+
+    ${plan ? `<div class="card"><div class="section">Your Plan</div><p style="font-size:13px;color:#1A1A1A;line-height:1.6;white-space:pre-line;">${plan.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</p></div>` : ""}
+
+    <div class="footer">Generated by OurSkinOurFuture · ${dateStr}</div>
+    <div class="actions">
+      <button onclick="window.print()">Print / Save as PDF</button>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: "text/html" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `scan-report-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `skin-report-${dateStr}.html`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -722,27 +829,36 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </button>
             </div>
 
-            {/* Save button - available immediately on results */}
-            {!viewingHistory && (
-              <div className="mb-4">
-                <button
-                  onClick={handleSave}
-                  disabled={saveState === "saving" || saveState === "saved"}
-                  className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
-                >
-                  {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
-                  {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
-                  {saveState === "saving" && "Saving..."}
-                  {saveState === "saved" && "Saved ✓"}
-                  {saveState === "error" && "Retry Save"}
-                </button>
-              {saveState === "error" && (
-                <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
-              )}
-              </div>
-            )}
+             {/* Save button - available immediately on results */}
+             {!viewingHistory && (
+               <div className="mb-4">
+                 <button
+                   onClick={handleSave}
+                   disabled={saveState === "saving" || saveState === "saved"}
+                   className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+                 >
+                   {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
+                   {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
+                   {saveState === "saving" && "Saving..."}
+                   {saveState === "saved" && "Saved ✓"}
+                   {saveState === "error" && "Retry Save"}
+                 </button>
+               {saveState === "error" && (
+                 <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
+               )}
+               </div>
+             )}
 
-            {/* Analysis Summary: overall + per-concern breakdown */}
+             <button
+               onClick={() => setStage("routine")}
+               className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-gold text-ink active:scale-[0.98] transition-transform mb-5"
+             >
+               <ClipboardList size={16} />
+               What should I do? (Your routine + lifestyle)
+               <ChevronRight size={16} />
+             </button>
+
+             {/* Analysis Summary: overall + per-concern breakdown */}
             <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Diagnostic Summary</div>
               
@@ -1155,16 +1271,69 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               )}
             </section>
 
-            <button
-              onClick={() => setStage("routine")}
-              className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-gold text-ink active:scale-[0.98] transition-transform"
-            >
-              <ClipboardList size={16} />
-              What should I do? (Your routine + lifestyle)
-              <ChevronRight size={16} />
-            </button>
+            {!plan && (
+              <button
+                onClick={generatePlan}
+                disabled={planLoading}
+                className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+              >
+                {planLoading ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                {planLoading ? "Generating your plan..." : "Generate my personalized plan"}
+              </button>
+            )}
+
+            {plan && (
+              <section className={`rounded-3xl p-5 ${planSource === "error" ? "bg-clay/10 border border-clay/40" : "bg-ink"}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={13} className={planSource === "error" ? "text-clay" : "text-gold"} />
+                    <span className={`text-[11px] font-mono uppercase tracking-widest ${planSource === "error" ? "text-clay" : "text-gold"}`}>
+                      {planSource === "error" ? "Plan unavailable" : "Your plan"}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono text-faint">
+                    {planSource === "qwen" ? "by Qwen" : planSource === "error" ? "API error" : "demo plan"}
+                  </span>
+                </div>
+                <p className={`text-sm leading-relaxed whitespace-pre-line ${planSource === "error" ? "text-clay" : "text-[#F0EBDD]"}`}>{plan}</p>
+              </section>
+            )}
+
+            <div className="flex gap-2.5">
+              {!viewingHistory && (
+                <button
+                  onClick={handleSave}
+                  disabled={saveState === "saving" || saveState === "saved"}
+                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+                >
+                  {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
+                  {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
+                  {saveState === "saving" && "Saving..."}
+                  {saveState === "saved" && "Saved ✓"}
+                  {saveState === "error" && "Retry Save"}
+                </button>
+              )}
+              <button
+                onClick={downloadScanReport}
+                disabled={!analysis}
+                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                <Download size={15} />
+                Download Report
+              </button>
+              <button
+                onClick={reset}
+                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform"
+              >
+                Scan Another
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            {saveState === "error" && !viewingHistory && (
+              <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
+            )}
           </div>
-        )}
+            )}
 
         {stage === "routine" && analysis && (
           <div className="mt-4 space-y-4">
