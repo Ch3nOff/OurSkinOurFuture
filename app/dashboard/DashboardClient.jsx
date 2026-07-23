@@ -722,7 +722,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                       ))}
                     </div>
                   )}
-                  
+
+                  {analysis.skinTypes?.length > 0 && (
+                    <div className="flex items-center gap-2 ml-auto">
+                      <div className="w-8 h-8 rounded-full border-2 border-border flex items-center justify-center text-sm">
+                        {analysis.skinTypes[0].skinType === "Oily" ? "💧" : analysis.skinTypes[0].skinType === "Dry" ? "🏜️" : analysis.skinTypes[0].skinType === "Sensitive" ? "🌸" : "✨"}
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-medium text-ink">Skin Type</div>
+                        <div className="text-[10px] text-muted">{analysis.skinTypes[0].skinType}</div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="flex items-center gap-2 ml-auto">
                     <div className="w-8 h-8 rounded-full border-2 border-border" style={{ background: "linear-gradient(135deg, #FDBCB4, #E8B4B8)" }} />
                     <div>
