@@ -768,6 +768,45 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             </section>
 
+            <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
+              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Skin Condition Radar</div>
+              <div className="flex items-center justify-center">
+                <svg viewBox="0 0 200 200" className="w-48 h-48">
+                  <polygon points="100,20 180,75 150,160 50,160 20,75" fill="none" stroke="#F0EBDD" strokeWidth="1" />
+                  <polygon points="100,50 150,80 130,130 70,130 50,80" fill="none" stroke="#F0EBDD" strokeWidth="1" />
+                  {(() => {
+                    const items = topConcerns(analysis.concerns, 5);
+                    if (items.length === 0) return null;
+                    const cx = 100, cy = 90, r = 65;
+                    const angleStep = (2 * Math.PI) / items.length;
+                    const startAngle = -Math.PI / 2;
+                    const pts = items.map((c, i) => {
+                      const angle = startAngle + i * angleStep;
+                      const dist = (Math.min(100, Math.max(0, c.score)) / 100) * r;
+                      return `${cx + dist * Math.cos(angle)},${cy + dist * Math.sin(angle)}`;
+                    }).join(" ");
+                    return <polygon points={pts} fill="rgba(201,168,118,0.25)" stroke="#C9A876" strokeWidth="2" strokeLinejoin="round" />;
+                  })()}
+                  {topConcerns(analysis.concerns, 5).map((c, i) => {
+                    const cx = 100, cy = 90, r = 65;
+                    const angleStep = (2 * Math.PI) / 5;
+                    const startAngle = -Math.PI / 2;
+                    const angle = startAngle + i * angleStep;
+                    const x = cx + r * Math.cos(angle);
+                    const y = cy + r * Math.sin(angle);
+                    return (
+                      <g key={c.key}>
+                        <circle cx={x} cy={y} r="3" fill="#C9A876" />
+                        <text x={x + (Math.cos(angle) > 0 ? 6 : -6)} y={y + 3} textAnchor={Math.cos(angle) > 0 ? "start" : "end"} className="text-[8px] fill-muted">
+                          {CONCERN_LABELS[c.key] || c.key}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+            </section>
+
             <section className="mb-4">
               <div className="text-xs font-mono uppercase tracking-widest mb-3 px-1 text-muted">
                 Recommended Ingredients
@@ -880,10 +919,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                           }
                         }}
                         disabled={tryOnLoading}
-                        className="rounded-2xl overflow-hidden border border-border bg-paper active:scale-[0.98] transition-transform disabled:opacity-50 text-left"
+                        className="group rounded-2xl overflow-hidden border border-border bg-paper active:scale-[0.98] transition-all duration-200 disabled:opacity-50 text-left hover:shadow-lg hover:border-[#C9A876]/40 hover:-translate-y-0.5"
                       >
                         <div className="aspect-[3/4] relative">
-                          <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover" />
+                          <img src={g.imageUrl} alt={g.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                           <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/60 to-transparent">
                             <p className="text-[10px] font-medium text-white">{g.name}</p>
                             <p className="text-[9px] text-white/80">{g.reason}</p>
