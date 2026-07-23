@@ -681,7 +681,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             {(analysis.overall != null || analysis.skinAge != null || analysis.skinTypes?.length) && (
               <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
-                <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Overall</div>
+                <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Skin Profile</div>
                 <div className="flex flex-wrap gap-4">
                   {analysis.overall != null && (
                     <div>
@@ -704,6 +704,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                       ))}
                     </div>
                   )}
+                  
+                  <div className="flex items-center gap-2 ml-auto">
+                    <div className="w-8 h-8 rounded-full border-2 border-border" style={{ background: "linear-gradient(135deg, #FDBCB4, #E8B4B8)" }} />
+                    <div>
+                      <div className="text-[11px] font-medium text-ink">Undertone</div>
+                      <div className="text-[10px] text-muted">Warm / Neutral</div>
+                    </div>
+                  </div>
                 </div>
               </section>
             )}
