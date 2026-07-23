@@ -28,14 +28,12 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-paper">
       <header className="max-w-3xl mx-auto px-5 pt-8 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-ink">
-            <Sparkles size={14} color="#C9A876" />
-          </div>
-          <span className="text-sm font-semibold tracking-tight text-ink">
+        <Link href="/" className="flex items-center gap-3">
+          <img src="/Logo.png" alt="OurSkinOurFuture" className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-border" />
+          <span className="text-base font-semibold tracking-tight text-ink">
             Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
           </span>
-        </div>
+        </Link>
         <Link
           href="/dashboard"
           className="text-xs font-medium px-4 py-2 rounded-2xl bg-ink text-paper"
