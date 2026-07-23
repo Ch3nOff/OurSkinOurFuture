@@ -15,6 +15,9 @@ import {
   History,
   ClipboardList,
   HeartPulse,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP, buildRoutine } from "@/lib/skinAnalysis";
@@ -23,6 +26,7 @@ import IngredientCard from "@/components/IngredientCard";
 import TimelineSlider from "@/components/TimelineSlider";
 import ScanComparison from "@/components/ScanComparison";
 import CameraCapture from "@/components/CameraCapture";
+import FaceGuide from "@/components/FaceGuide";
 import { cropToFaceZone } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
@@ -61,6 +65,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
   const supabase = createClient();
 
+  const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
+
   useEffect(() => {
     const {
       data: { subscription },
@@ -73,6 +79,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   async function runAnalysis(dataUrl, seed) {
     setImagePreview(dataUrl);
     setAnalysisError(null);
+    setValidation({ status: "idle", message: "", hasGlasses: false });
     setStage("analyzing");
 
     try {
@@ -113,6 +120,15 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   function handleCameraCapture(dataUrl) {
     const seed = dataUrl.length + Date.now();
     runAnalysis(dataUrl, seed);
+  }
+
+  async function handleValidationChange(data) {
+    setValidation((prev) => ({
+      ...prev,
+      status: data.ok ? "passed" : "warning",
+      message: data.ok ? "Face validated — proceeding to analysis" : "Please adjust your photo",
+      hasGlasses: data.hasGlasses || false,
+    }));
   }
 
   function reset() {
@@ -333,7 +349,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <Sparkles size={14} color="#C9A876" />
           </div>
             <span className="text-sm font-semibold tracking-tight text-ink">
-            Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
+            Derma<span className="text-gold">Vision</span> AI
           </span>
         </Link>
 
@@ -422,13 +438,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             )}
             <h1 className="text-3xl font-bold leading-tight mb-2 text-ink">
-              Understand your skin.
+              DermaVision AI.
               <br />
-              See where it's headed.
+              Predictive clinical skin suite.
             </h1>
             <p className="text-sm mb-6 leading-relaxed text-muted">
-              Use your camera or upload a photo for a skin condition analysis, ingredient recommendations, and a
-              projection of what consistent care could look like.
+              Position your face in the frame, remove glasses, and run a multi-concern diagnostic session.
+              You will get quantitative severity scores, zone mapping, ingredient targeting, and a
+              treatment projection — all from one selfie.
             </p>
 
             <div className="flex gap-2.5 mb-3">
@@ -458,10 +475,21 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <div className="relative rounded-2xl overflow-hidden border border-border bg-paper mb-4 aspect-[4/5] max-w-xs mx-auto">
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-32 h-40 rounded-[50%] border-2 border-dashed border-gold/60 flex items-center justify-center">
-                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted text-center px-2">Center your face here</span>
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted text-center px-2">Center face · No glasses</span>
                 </div>
               </div>
             </div>
+
+            <FaceGuide image={imagePreview} onValidate={handleValidationChange} />
+
+            {validation.hasGlasses && (
+              <div className="mt-3 rounded-2xl p-3 bg-gold/10 border border-gold/30 flex items-start gap-2">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-gold" />
+                <p className="text-[11px] text-gold leading-relaxed">
+                  Glasses detected. For accurate skin analysis, please remove them and retake the photo.
+                </p>
+              </div>
+            )}
 
             <p className="text-[11px] text-center mb-6 text-faint">
               For the most accurate read, using your camera performs better than uploading an existing photo —
@@ -479,8 +507,17 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         )}
 
         {stage === "camera" && (
-          <div className="mt-6">
+          <div className="mt-6 space-y-3">
             <CameraCapture onCapture={handleCameraCapture} onClose={() => setStage("capture")} />
+            <FaceGuide image={imagePreview} onValidate={handleValidationChange} />
+            {validation.hasGlasses && (
+              <div className="rounded-2xl p-3 bg-gold/10 border border-gold/30 flex items-start gap-2">
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-gold" />
+                <p className="text-[11px] text-gold leading-relaxed">
+                  Glasses detected. For accurate skin analysis, please remove them and retake the photo.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -495,11 +532,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               />
             )}
             <Loader2 size={24} className="animate-spin mb-3 text-sage" />
-            <p className="text-sm font-medium text-ink">Analyzing skin condition...</p>
-            {photoType && (
-              <p className="text-[11px] mt-1 text-faint italic">{photoType.reason}</p>
-            )}
-            <p className="text-[11px] mt-1 text-faint">Checking 8 indicators across 6 facial zones</p>
+            <p className="text-sm font-medium text-ink">Running clinical skin analysis...</p>
+            <p className="text-[11px] mt-1 text-faint">Multi-concern diagnostic + zone mapping</p>
           </div>
         )}
 
@@ -512,7 +546,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   <img src={imagePreview} alt="Scan result" className="w-11 h-11 rounded-xl object-cover border border-border" />
                 )}
                 <div>
-                  <div className="text-sm font-semibold text-ink">Analysis Results</div>
+                  <div className="text-sm font-semibold text-ink">Diagnostic Results</div>
                   <div className="text-[11px] font-mono text-faint">
                     {analysis.mock ? "Demo model" : "YouCam Skin Analysis"}
                   </div>
@@ -547,7 +581,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
             {/* Analysis Summary: overall + per-concern breakdown */}
             <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Analysis Summary</div>
+              <div className="text-xs font-mono uppercase tracking-widest mb-3 text-muted">Diagnostic Summary</div>
               
               {/* Overall scores row */}
               <div className="flex flex-wrap gap-4 mb-4 pb-4 border-b border-border">
@@ -636,7 +670,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             })()}
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
+               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Zone Diagnostic Map</div>
               <FaceZoneMap image={imagePreview} zones={analysis.zones} masks={analysis.masks} concerns={analysis.concerns} />
             </section>
 
@@ -708,7 +742,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             )}
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-              <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Top Concerns</div>
+               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Concern Severity</div>
               <div className="space-y-3">
                 {topConcerns(analysis.concerns, 5).map((c) => {
                   const pct = Math.min(100, Math.max(0, c.score));
@@ -781,7 +815,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               const routine = buildRoutine(analysis.concerns);
               return (
                 <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
-                  <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Routine</div>
+                  <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Protocol</div>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {[
                       { label: "Morning", steps: routine.morning, icon: "☀️" },

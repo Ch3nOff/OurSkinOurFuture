@@ -1,9 +1,9 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "OurSkinOurFuture — See Where Your Skin Is Headed",
+  title: "DermaVision AI — Predictive Clinical Skin Suite",
   description:
-    "Upload a photo for an AI skin condition analysis, ingredient recommendations, and a projection of what consistent care could look like — powered by YouCam.",
+    "Multi-concern AI skin diagnosis, treatment simulation, and agentic clinical coaching — powered by YouCam Skin AI.",
 };
 
 export default function RootLayout({ children }) {
