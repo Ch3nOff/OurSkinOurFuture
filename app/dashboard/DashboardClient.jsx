@@ -60,6 +60,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
   const supabase = createClient();
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
+  const [saveError, setSaveError] = useState("");
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
   const [showHistory, setShowHistory] = useState(false);
@@ -172,6 +173,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setPlan(null);
     setPlanSource(null);
     setSaveState("idle");
+    setSaveError("");
     setValidation({ status: "idle", message: "", hasGlasses: false });
     setViewingHistory(false);
     setSimulationResult(null);
@@ -384,7 +386,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setHistory((prev) => [inserted, ...prev.filter((h) => h.id !== inserted.id)]);
     } catch (err) {
       console.error("Save failed:", err);
+      const msg = err?.message || "Save failed.";
       setSaveState("error");
+      setSaveError(msg);
     }
   }
 
@@ -676,9 +680,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   {saveState === "saved" && "Saved ✓"}
                   {saveState === "error" && "Retry Save"}
                 </button>
-                {saveState === "error" && (
-                  <p className="text-xs text-clay mt-2 text-center">Couldn't save — check your connection and try again.</p>
-                )}
+              {saveState === "error" && (
+                <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
+              )}
               </div>
             )}
 
@@ -1195,7 +1199,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </button>
             </div>
             {saveState === "error" && (
-              <p className="text-xs text-clay mt-2 text-center">Couldn't save — check your connection and try again.</p>
+              <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
             )}
           </div>
         )}
