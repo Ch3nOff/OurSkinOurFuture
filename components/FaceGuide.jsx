@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 
+const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/8zyLL8Q0X/";
+
 export default function FaceGuide({ image, onValidate }) {
   const [status, setStatus] = useState("idle");
   const [message, setMessage] = useState("Waiting for photo...");
@@ -99,6 +101,11 @@ export default function FaceGuide({ image, onValidate }) {
         const data = await response.json();
         if (data.hasGlasses === true) return true;
       }
+    } catch {}
+
+    try {
+      const hasGlasses = await detectGlassesWithTM(img);
+      if (hasGlasses) return true;
     } catch {}
 
     const w = img.width;
@@ -217,6 +224,37 @@ export default function FaceGuide({ image, onValidate }) {
     const slice = values.slice(start, end);
     for (let i = 0; i < slice.length; i++) sum += slice[i];
     return slice.length ? sum / slice.length : 0;
+  }
+
+  let tmModelCache = null;
+  let tmLoading = false;
+
+  async function detectGlassesWithTM(img) {
+    if (typeof window === "undefined") return false;
+
+    if (!tmModelCache && !tmLoading) {
+      tmLoading = true;
+      try {
+        const [{ load }] = await Promise.all([
+          import("@teachablemachine/image"),
+          import("@tensorflow/tfjs"),
+        ]);
+        tmModelCache = await load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
+      } catch (e) {
+        console.warn("TM load failed:", e);
+        tmLoading = false;
+        return false;
+      }
+      tmLoading = false;
+    }
+
+    if (!tmModelCache) return false;
+
+    const prediction = await tmModelCache.predict(img);
+    const glassesClass = prediction.find((p) => /glass/i.test(p.className));
+    if (glassesClass && glassesClass.probability > 0.5) return true;
+    const best = prediction.reduce((a, b) => (a.probability > b.probability ? a : b));
+    return best.probability > 0.5;
   }
 
   useEffect(() => {
