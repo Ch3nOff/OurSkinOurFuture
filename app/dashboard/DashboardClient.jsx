@@ -406,12 +406,12 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         <Link href="/" className="flex items-center gap-3">
           {!logoError ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src="/logo.png"
-              alt="OurSkinOurFuture"
-              className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-border"
-              onError={() => setLogoError(true)}
-            />
+              <img
+                src="/Logo.png"
+                alt="OurSkinOurFuture"
+                className="w-10 h-10 rounded-2xl object-cover shrink-0 border border-border"
+                onError={() => setLogoError(true)}
+              />
           ) : (
             <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 bg-ink">
               <Sparkles size={18} color="#C9A876" />
@@ -830,7 +830,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                           strokeDashoffset={`${2 * Math.PI * 30 * (1 - analysis.overall / 100)}`}
                           transform="rotate(-90 36 36)"
                         />
-                        <text x="36" y="40" textAnchor="middle" className="text-xs font-semibold fill-ink">
+                        <text x="36" y="36" textAnchor="middle" dominantBaseline="central" className="text-xs font-semibold fill-ink">
                           {analysis.overall}
                         </text>
                       </svg>
