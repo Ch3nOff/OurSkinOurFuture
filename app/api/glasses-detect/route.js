@@ -6,10 +6,11 @@ export async function POST(request) {
     const { image } = body;
 
     if (!image || typeof image !== "string") {
-      return NextResponse.json({ hasGlasses: false }, { status: 200 });
+      return NextResponse.json({ hasGlasses: false, source: "no-image" }, { status: 200 });
     }
 
     let hasGlasses = false;
+    let source = "none";
 
     if (process.env.YOUCAM_API_KEY && image.startsWith("data:")) {
       try {
@@ -72,7 +73,7 @@ export async function POST(request) {
               const taskData = await taskRes.json();
               const taskId = taskData?.data?.task_id || taskData?.task_id;
               if (taskId) {
-                for (let i = 0; i < 15; i++) {
+                for (let i = 0; i < 12; i++) {
                   await new Promise((r) => setTimeout(r, 1500));
                   const pollRes = await fetch(
                     `${process.env.YOUCAM_API_BASE || "https://yce-api-01.makeupar.com"}/s2s/v2.0/task/face-attribute/${taskId}`,
@@ -84,6 +85,7 @@ export async function POST(request) {
                     const pollData = await pollRes.json();
                     const status = pollData?.data?.task_status || pollData?.status;
                     if (status === "success" || status === "completed" || status === "done") {
+                      source = "youcam";
                       const attrs = pollData?.data?.results?.output?.[0]?.face_attributes || pollData?.data?.results?.face_attributes || {};
                       if (attrs.wearing_glasses === true || attrs.glasses === true || attrs.has_glasses === true) {
                         hasGlasses = true;
@@ -96,12 +98,14 @@ export async function POST(request) {
             }
           }
         }
-      } catch {
+      } catch (err) {
+        console.warn("YouCam glasses detect failed:", err.message);
+        source = "youcam-failed";
       }
     }
 
-    return NextResponse.json({ hasGlasses });
+    return NextResponse.json({ hasGlasses, source });
   } catch {
-    return NextResponse.json({ hasGlasses: false }, { status: 200 });
+    return NextResponse.json({ hasGlasses: false, source: "error" }, { status: 200 });
   }
 }

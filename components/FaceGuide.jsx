@@ -101,18 +101,18 @@ export default function FaceGuide({ image, onValidate }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image }),
+        signal: AbortSignal.timeout(8000),
       });
       if (response.ok) {
         const data = await response.json();
         return data.hasGlasses === true;
       }
-    } catch {
-    }
+    } catch {}
 
-    const centerY = Math.floor(h * 0.38);
-    const sampleWidth = Math.floor(w * 0.6);
+    const centerY = Math.floor(h * 0.36);
+    const sampleWidth = Math.floor(w * 0.65);
     const startX = Math.floor((w - sampleWidth) / 2);
-    const sampleHeight = Math.floor(h * 0.12);
+    const sampleHeight = Math.floor(h * 0.14);
     const startY = centerY - Math.floor(sampleHeight / 2);
 
     const imageData = ctx.getImageData(startX, startY, sampleWidth, sampleHeight);
@@ -125,12 +125,13 @@ export default function FaceGuide({ image, onValidate }) {
       const b = data[i + 2];
       const brightness = (r + g + b) / 3;
       totalPixels++;
-      if (brightness < 60 && Math.abs(r - g) < 25 && Math.abs(g - b) < 25) {
+      if (brightness < 70 && Math.abs(r - g) < 28 && Math.abs(g - b) < 28 && Math.abs(r - b) < 35) {
         darkPixels++;
       }
     }
 
-    return darkPixels / totalPixels > 0.18;
+    const ratio = totalPixels > 0 ? darkPixels / totalPixels : 0;
+    return ratio > 0.22;
   }
 
   useEffect(() => {

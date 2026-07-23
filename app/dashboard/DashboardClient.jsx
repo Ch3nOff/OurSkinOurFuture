@@ -30,7 +30,7 @@ import FaceGuide from "@/components/FaceGuide";
 import { cropToFaceZone } from "@/lib/imageUtils";
 
 export default function DashboardClient({ initialUser, initialHistory }) {
-  const [stage, setStage] = useState("capture"); // capture | camera | analyzing | results
+  const [stage, setStage] = useState("capture"); // capture | camera | validate | analyzing | results | routine
   const [imagePreview, setImagePreview] = useState(null);
   const [analysis, setAnalysis] = useState(null);
   const [analysisError, setAnalysisError] = useState(null);
@@ -61,11 +61,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [user, setUser] = useState(initialUser);
   const [history, setHistory] = useState(initialHistory);
   const [showHistory, setShowHistory] = useState(false);
-  const fileInputRef = useRef(null);
-
-  const supabase = createClient();
-
   const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const {
@@ -106,7 +103,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     const reader = new FileReader();
     reader.onload = (e) => {
       const seed = file.size + file.name.length * 7;
-      runAnalysis(e.target.result, seed);
+      setImagePreview(e.target.result);
+      setStage("validate");
     };
     reader.readAsDataURL(file);
   }, []);
@@ -118,8 +116,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   }, [handleFile]);
 
   function handleCameraCapture(dataUrl) {
-    const seed = dataUrl.length + Date.now();
-    runAnalysis(dataUrl, seed);
+    setImagePreview(dataUrl);
+    setStage("validate");
   }
 
   async function handleValidationChange(data) {
@@ -150,6 +148,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setPlan(null);
     setPlanSource(null);
     setSaveState("idle");
+    setValidation({ status: "idle", message: "", hasGlasses: false });
   }
 
   async function fetchProducts() {
@@ -519,9 +518,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         )}
 
         {stage === "camera" && (
-          <div className="mt-6 space-y-3">
+          <div className="mt-6">
             <CameraCapture onCapture={handleCameraCapture} onClose={() => setStage("capture")} />
-            <FaceGuide image={imagePreview} onValidate={handleValidationChange} />
+          </div>
+        )}
+
+        {stage === "validate" && imagePreview && (
+          <div className="mt-6 space-y-4">
+            <div className="rounded-2xl overflow-hidden border border-border bg-paper aspect-[3/4] max-w-xs mx-auto">
+              <img src={imagePreview} alt="Preview" className="w-full h-full object-contain" style={{ background: "#FDFBF6" }} />
+            </div>
+
+            <FaceGuide image={imagePreview} onValidate={setValidation} />
+
             {validation.hasGlasses && (
               <div className="rounded-2xl p-3 bg-gold/10 border border-gold/30 flex items-start gap-2">
                 <AlertTriangle size={14} className="mt-0.5 shrink-0 text-gold" />
@@ -530,6 +539,28 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 </p>
               </div>
             )}
+
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => {
+                  setStage("camera");
+                  setImagePreview(null);
+                  setValidation({ status: "idle", message: "", hasGlasses: false });
+                }}
+                className="flex-1 rounded-2xl py-3 text-xs font-semibold bg-paper text-ink border border-border active:scale-[0.98] transition-transform"
+              >
+                Retake Photo
+              </button>
+              <button
+                onClick={() => {
+                  const seed = imagePreview.length + Date.now();
+                  runAnalysis(imagePreview, seed);
+                }}
+                className="flex-1 rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform"
+              >
+                Continue to Analysis
+              </button>
+            </div>
           </div>
         )}
 
