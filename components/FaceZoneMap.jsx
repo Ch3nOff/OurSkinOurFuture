@@ -4,12 +4,12 @@ import { useState } from "react";
 import { ZONE_LABELS, scoreColor, scoreLabel, zoneExplanation, CONCERN_LABELS } from "@/lib/skinAnalysis";
 
 const POSITIONS = {
-  forehead: { cx: 150, cy: 55, r: 34 },
-  leftCheek: { cx: 90, cy: 150, r: 30 },
-  rightCheek: { cx: 210, cy: 150, r: 30 },
-  nose: { cx: 150, cy: 135, r: 20 },
-  underEye: { cx: 150, cy: 95, r: 16 },
-  chin: { cx: 150, cy: 215, r: 26 },
+  forehead: { cx: 150, cy: 55, r: 34, x: 105, y: 18, w: 90, h: 74 },
+  leftCheek: { cx: 90, cy: 150, r: 30, x: 45, y: 100, w: 90, h: 100 },
+  rightCheek: { cx: 210, cy: 150, r: 30, x: 165, y: 100, w: 90, h: 100 },
+  nose: { cx: 150, cy: 135, r: 20, x: 125, y: 115, w: 50, h: 40 },
+  underEye: { cx: 150, cy: 95, r: 16, x: 128, y: 78, w: 44, h: 34 },
+  chin: { cx: 150, cy: 215, r: 26, x: 118, y: 185, w: 64, h: 60 },
 };
 
 const TYPE_TO_ZONE = {
