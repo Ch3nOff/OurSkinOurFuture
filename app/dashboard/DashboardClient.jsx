@@ -660,21 +660,28 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             </section>
 
-            {/* Score legend */}
-            <div className="mb-5 rounded-2xl p-3 bg-card border border-border">
-              <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-2">How to read scores</div>
-              <div className="flex flex-wrap gap-3 text-[11px]">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#4A6355]" /> Low (0–30)
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#C9A876]" /> Moderate (31–60)
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#B85C4A]" /> High (61–100)
-                </span>
-              </div>
-            </div>
+            {(() => {
+              const top = topConcerns(analysis.concerns, 3);
+              if (top.length === 0) return null;
+              const avg = Math.round(top.reduce((s, c) => s + c.score, 0) / top.length);
+              const label = avg >= 70 ? "Needs attention" : avg >= 40 ? "Moderate" : "Good";
+              const gradient = avg >= 70 ? "from-[#B85C4A]/20 via-[#C9A876]/20 to-[#E8B4B8]/20" : avg >= 40 ? "from-[#C9A876]/20 via-[#E8B4B8]/20 to-[#FDFBF6]/20" : "from-[#4A6355]/20 via-[#9DC183]/20 to-[#FDFBF6]/20";
+              return (
+                <section className={`rounded-3xl p-6 mb-4 bg-gradient-to-br ${gradient} border border-border`}>
+                  <div className="text-xs font-mono uppercase tracking-widest mb-2 text-muted">Skin Health Snapshot</div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <div className="text-3xl font-semibold text-ink">{avg}</div>
+                      <div className="text-[11px] text-muted">Average top-concern score</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-ink">{label}</div>
+                      <div className="text-[11px] text-muted">Based on your 3 biggest areas</div>
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
 
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Facial Zone Map</div>
