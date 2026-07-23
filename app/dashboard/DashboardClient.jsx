@@ -66,6 +66,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [viewingHistory, setViewingHistory] = useState(false);
   const [validation, setValidation] = useState({ status: "idle", message: "", hasGlasses: false });
   const [simulationResult, setSimulationResult] = useState(null);
+  const [lastSavedScanId, setLastSavedScanId] = useState(null);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -76,6 +77,24 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     });
     return () => subscription.unsubscribe();
   }, [supabase]);
+
+  useEffect(() => {
+    if (!user || !lastSavedScanId || !simulationResult || Object.keys(simulationResult).length === 0) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { error } = await supabase
+          .from("scans")
+          .update({ simulation: simulationResult })
+          .eq("id", lastSavedScanId)
+          .eq("user_id", user.id);
+        if (!cancelled && !error) {
+          setHistory((prev) => prev.map((h) => h.id === lastSavedScanId ? { ...h, simulation: simulationResult } : h));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, [user, lastSavedScanId, simulationResult]);
 
   async function runAnalysis(dataUrl, seed) {
     setImagePreview(dataUrl);
@@ -156,6 +175,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setValidation({ status: "idle", message: "", hasGlasses: false });
     setViewingHistory(false);
     setSimulationResult(null);
+    setLastSavedScanId(null);
   }
 
   async function fetchProducts() {
@@ -305,6 +325,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
     }
     setSimulationResult(scan.simulation && typeof scan.simulation === "object" ? scan.simulation : null);
+    setLastSavedScanId(scan.id || null);
     setStage("results");
     setShowHistory(false);
     setViewingHistory(true);
@@ -359,6 +380,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       if (insertError) throw insertError;
 
       setSaveState("saved");
+      setLastSavedScanId(inserted.id);
       setHistory((prev) => [inserted, ...prev.filter((h) => h.id !== inserted.id)]);
     } catch (err) {
       console.error("Save failed:", err);

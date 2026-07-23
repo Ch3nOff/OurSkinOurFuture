@@ -61,16 +61,26 @@ export async function POST(request) {
       publicUrl = await uploadToSupabase(buffer, contentType);
     }
 
-    const intensity = totalWeeks > 0 ? weekIndex / totalWeeks : 0;
-    const { imageUrl } = await simulateWithYouCamFromUrl(publicUrl, intensity);
+    let projectedImages = null;
+    let mock = false;
+    let projectedScores = mockSimulation(baselineConcerns, weekIndex, totalWeeks);
 
-    const projectedScores = mockSimulation(baselineConcerns, weekIndex, totalWeeks);
+    try {
+      const intensity = totalWeeks > 0 ? weekIndex / totalWeeks : 0;
+      const { imageUrl } = await simulateWithYouCamFromUrl(publicUrl, intensity);
+      projectedImages = imageUrl ? [imageUrl] : null;
+      mock = false;
+    } catch (err) {
+      console.warn("YouCam simulation failed, using local fallback:", err.message);
+      projectedImages = null;
+      mock = true;
+    }
 
     return NextResponse.json({
       projectedScores,
-      projectedImages: imageUrl ? [imageUrl] : null,
+      projectedImages,
       baselineImage: publicUrl,
-      mock: false,
+      mock,
     });
   } catch (err) {
     console.error("Simulate route error:", err.message);
