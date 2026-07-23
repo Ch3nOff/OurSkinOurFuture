@@ -1,7 +1,7 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "DermaVision AI — Predictive Clinical Skin Suite",
+  title: "OurSkinOurFuture — Predictive Clinical Skin Suite",
   description:
     "Multi-concern AI skin diagnosis, treatment simulation, and agentic clinical coaching — powered by YouCam Skin AI.",
 };

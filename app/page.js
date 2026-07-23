@@ -10,7 +10,7 @@ const STEPS = [
   {
     icon: FlaskConical,
     title: "AI skin diagnosis",
-    body: "DermaVision analyzes multiple concern areas — acne, redness, texture, pores, dark circles, firmness, and more — with confidence scores and zone mapping.",
+    body: "OurSkinOurFuture analyzes multiple concern areas — acne, redness, texture, pores, dark circles, firmness, and more — with confidence scores and zone mapping.",
   },
   {
     icon: TrendingUp,
@@ -33,7 +33,7 @@ export default function LandingPage() {
             <Sparkles size={14} color="#C9A876" />
           </div>
           <span className="text-sm font-semibold tracking-tight text-ink">
-            Derma<span className="text-gold">Vision</span> AI
+            Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
           </span>
         </div>
         <Link
@@ -53,7 +53,7 @@ export default function LandingPage() {
             Not another filter.
           </h1>
           <p className="text-base leading-relaxed max-w-xl mx-auto mb-8 text-muted">
-            DermaVision AI turns a single selfie into a dermatologist-grade diagnostic session:
+            OurSkinOurFuture turns a single selfie into a dermatologist-grade diagnostic session:
             multi-concern analysis, treatment simulation, and an evidence-based care plan — all on your phone.
           </p>
           <Link

@@ -1,14 +1,14 @@
-# Active Context: DermaVision AI
+# Active Context: OurSkinOurFuture
 
 ## Current State
 
 **Status**: ✅ Prototype built and deploying — full upload → face validation → analyze → results flow working; Vercel build fixed and green.
 
-This is **DermaVision AI** — a Predictive Clinical Skin Suite built for the YouCam Skin AI hackathon (deadline Aug 17, 2026). The repo is a Next.js 14 (App Router, JS) app. The canonical source tree is the **root `app/`** directory.
+This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the YouCam Skin AI hackathon (deadline Aug 17, 2026). The repo is a Next.js 14 (App Router, JS) app. The canonical source tree is the **root `app/`** directory.
 
 ## Recently Completed
 - [x] **VTO removal**: Deleted all apparel try-on code (routes, libs, UI, garment catalog). App is now 100% focused on facial skin.
-- [x] **DermaVision rebrand**: Updated landing page, dashboard header, section titles, and metadata to clinical skin-suite branding.
+- [x] **OurSkinOurFuture rebrand**: Updated landing page, dashboard header, section titles, and metadata to clinical skin-suite branding.
 - [x] **FaceGuide component** (`components/FaceGuide.jsx`): Post-capture validation that checks image dimensions, aspect ratio, brightness, and glasses detection.
 - [x] **Glasses detection API** (`app/api/glasses-detect/route.js`): Primary via YouCam `face-attribute` task; fallback heuristic on eye-region dark-pixel ratio.
 - [x] **Face guide UI**: Upload screen shows a dashed oval guide with "Center face · No glasses" prompt. Validation results appear after photo capture.
@@ -24,7 +24,7 @@ This is **DermaVision AI** — a Predictive Clinical Skin Suite built for the Yo
 ## Current Structure
 | File | Purpose |
 |------|---------|
-| `app/page.js` | Landing page (DermaVision AI branding) |
+| `app/page.js` | Landing page (OurSkinOurFuture branding) |
 | `app/dashboard/DashboardClient.jsx` | Main app: capture, face validation, analyze, results, save, compare |
 | `app/auth/AuthForm.jsx` | Supabase sign in / sign up |
 | `app/api/analyze/route.js` | Live YouCam Skin Analysis (POST) + GET color-tone/face-attribute modes |
@@ -46,7 +46,7 @@ This is **DermaVision AI** — a Predictive Clinical Skin Suite built for the Yo
 ## Key Decisions
 - `@/*` alias resolves to repo root via `jsconfig.json` (Next.js honored over `tsconfig.json` because the app is JS, not TS). Do not reintroduce a `tsconfig.json` that maps `@/` to `src/`.
 - `next.config.js` holds the Supabase remote image pattern; `next.config.ts` was removed as a conflicting duplicate.
-- **Brand**: DermaVision AI — Predictive Clinical Skin Suite
+- **Brand**: OurSkinOurFuture — Predictive Clinical Skin Suite
 - **Track**: Perfect Corp Skin AI Track 1 (pure facial skin intelligence)
 - **VTO removed**: All apparel try-on code deleted; focus is 100% facial skin
 - **Face validation flow**: capture/upload → FaceGuide checks brightness, aspect ratio, glasses → analyze → results
@@ -81,4 +81,4 @@ This is **DermaVision AI** — a Predictive Clinical Skin Suite built for the Yo
 | 2026-07-22 (5) | Added retry logic for skin analysis + simulation, garment catalog flow |
 | 2026-07-22 (6) | Visual polish: Top Concerns severity bars, Skin Health Snapshot, Skin Condition Radar, Color Harmony section, personalized Routine builder, before/after toggle, concern icons |
 | 2026-07-23 (1) | **VTO removal**: deleted try-on routes, garment catalog, VTO lib, ManualCrop, SkinHealthDashboard; simplified crop to guided upload |
-| 2026-07-23 (2) | **DermaVision pivot**: rebranded to clinical skin suite, added FaceGuide validation component, glasses detection API (`/api/glasses-detect`), updated all section copy to diagnostic terminology |
+| 2026-07-23 (2) | **OurSkinOurFuture pivot**: rebranded to clinical skin suite, added FaceGuide validation component, glasses detection API (`/api/glasses-detect`), updated all section copy to diagnostic terminology |

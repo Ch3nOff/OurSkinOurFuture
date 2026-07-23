@@ -360,7 +360,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             <Sparkles size={14} color="#C9A876" />
           </div>
             <span className="text-sm font-semibold tracking-tight text-ink">
-            Derma<span className="text-gold">Vision</span> AI
+            Our<span className="text-gold">Skin</span>Our<span className="text-gold">Future</span>
           </span>
         </Link>
 
@@ -449,7 +449,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             )}
             <h1 className="text-3xl font-bold leading-tight mb-2 text-ink">
-              DermaVision AI.
+              OurSkinOurFuture.
               <br />
               Predictive clinical skin suite.
             </h1>
