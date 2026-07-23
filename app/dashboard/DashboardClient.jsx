@@ -20,6 +20,9 @@ import {
   XCircle,
   AlertTriangle,
   ScanFace,
+  HelpCircle,
+  Info,
+  BookOpen,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP, buildRoutine } from "@/lib/skinAnalysis";
@@ -71,6 +74,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [concernPage, setConcernPage] = useState(0);
   const [zoomedImage, setZoomedImage] = useState(null);
   const [logoError, setLogoError] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -183,6 +188,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setLastSavedScanId(null);
     setConcernPage(0);
     setZoomedImage(null);
+    setShowHelp(false);
+    setTutorialStep(0);
   }
 
   async function fetchProducts() {
@@ -421,6 +428,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         </Link>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowHelp((s) => !s)}
+            className="flex items-center gap-1.5 text-xs font-medium text-muted hover:text-ink transition-colors"
+          >
+            <HelpCircle size={13} />
+            Guide
+          </button>
           {user ? (
             <button
               onClick={async () => {
@@ -451,7 +465,38 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             )}
 
-            <div className="flex gap-2.5 mb-3">
+            <div className="rounded-3xl p-5 mb-5 bg-card border border-border">
+              <div className="flex items-center gap-2 mb-2">
+                <BookOpen size={14} className="text-gold" />
+                <div className="text-xs font-mono uppercase tracking-widest text-muted">How to use</div>
+              </div>
+              <p className="text-xs leading-relaxed text-muted mb-3">
+                OurSkinOurFuture analyzes your skin from a single photo. For best results, use a well-lit front-facing portrait with no glasses.
+                You can capture a fresh photo or upload one from your library.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <div className="rounded-xl p-2.5 bg-paper border border-border">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">1. Capture</div>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    Tap <span className="font-semibold text-ink">Use Camera</span> or <span className="font-semibold text-ink">Upload Photo</span>.
+                  </p>
+                </div>
+                <div className="rounded-xl p-2.5 bg-paper border border-border">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">2. Analyze</div>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    Review your diagnostic summary, concern severity, zone map, and skin profile.
+                  </p>
+                </div>
+                <div className="rounded-xl p-2.5 bg-paper border border-border">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted mb-1">3. Act</div>
+                  <p className="text-[11px] leading-relaxed text-muted">
+                    Save your scan, compare history, and follow your personalized routine.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 mb-5">
               <button
                 onClick={() => setStage("camera")}
                 className="flex-1 rounded-2xl py-4 flex flex-col items-center justify-center gap-1.5 bg-ink text-paper"
@@ -476,7 +521,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
             </div>
 
             {history.length > 0 && (
-              <div className="mt-8">
+              <div className="mt-2">
                 <div className="flex items-center gap-2 mb-3">
                   <ScanFace size={14} className="text-gold" />
                   <div className="text-xs font-mono uppercase tracking-widest text-muted">Previous Scans</div>
@@ -1192,6 +1237,100 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               className="max-w-full max-h-full object-contain rounded-2xl"
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        )}
+
+        {/* Help / tutorial panel */}
+        {showHelp && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <div className="bg-paper border border-border rounded-t-3xl sm:rounded-3xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <BookOpen size={14} className="text-gold" />
+                  <div className="text-sm font-semibold text-ink">Guide</div>
+                </div>
+                <button onClick={() => { setShowHelp(false); setTutorialStep(0); }} className="text-muted hover:text-ink">
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <div className="text-xs font-mono uppercase tracking-widest text-muted mb-2">Tutorial</div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="flex-1 h-1.5 rounded-full bg-border overflow-hidden">
+                      <div className="h-full rounded-full bg-gold" style={{ width: `${((tutorialStep + 1) / 3) * 100}%` }} />
+                    </div>
+                    <span className="text-[10px] font-mono text-muted">{tutorialStep + 1}/3</span>
+                  </div>
+                  {tutorialStep === 0 && (
+                    <div className="rounded-2xl p-3 bg-card border border-border">
+                      <div className="text-xs font-semibold text-ink mb-1">Step 1 — Start a scan</div>
+                      <p className="text-[11px] leading-relaxed text-muted">
+                        Use <span className="font-semibold text-ink">Use Camera</span> or <span className="font-semibold text-ink">Upload Photo</span> to provide a clear front-facing portrait. Good lighting and no glasses give the most accurate results.
+                      </p>
+                    </div>
+                  )}
+                  {tutorialStep === 1 && (
+                    <div className="rounded-2xl p-3 bg-card border border-border">
+                      <div className="text-xs font-semibold text-ink mb-1">Step 2 — Review results</div>
+                      <p className="text-[11px] leading-relaxed text-muted">
+                        After analysis, read your <span className="font-semibold text-ink">Diagnostic Summary</span>, <span className="font-semibold text-ink">Concern Severity</span>, <span className="font-semibold text-ink">Zone Diagnostic Map</span>, <span className="font-semibold text-ink">Your Skin Profile</span>, and <span className="font-semibold text-ink">Treatment Simulation</span>.
+                      </p>
+                    </div>
+                  )}
+                  {tutorialStep === 2 && (
+                    <div className="rounded-2xl p-3 bg-card border border-border">
+                      <div className="text-xs font-semibold text-ink mb-1">Step 3 — Save and track</div>
+                      <p className="text-[11px] leading-relaxed text-muted">
+                        Tap <span className="font-semibold text-ink">Save This Test</span> to store your scan. Revisit it anytime from <span className="font-semibold text-ink">Previous Scans</span>. Compare changes over time and follow your personalized routine.
+                      </p>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between mt-3">
+                    <button
+                      onClick={() => setTutorialStep((s) => Math.max(0, s - 1))}
+                      disabled={tutorialStep === 0}
+                      className="text-[11px] font-mono text-muted hover:text-ink disabled:opacity-40"
+                    >
+                      ← Prev
+                    </button>
+                    <button
+                      onClick={() => setTutorialStep((s) => Math.min(2, s + 1))}
+                      disabled={tutorialStep === 2}
+                      className="text-[11px] font-mono text-muted hover:text-ink disabled:opacity-40"
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-xs font-mono uppercase tracking-widest text-muted mb-2">Category meanings</div>
+                  <div className="space-y-2">
+                    <div className="rounded-xl p-2.5 bg-paper border border-border">
+                      <div className="text-[11px] font-semibold text-ink mb-0.5">Concern Severity</div>
+                      <p className="text-[10px] leading-relaxed text-muted">Scores how strong each skin issue is right now, from 0 to 100. Higher means more noticeable.</p>
+                    </div>
+                    <div className="rounded-xl p-2.5 bg-paper border border-border">
+                      <div className="text-[11px] font-semibold text-ink mb-0.5">Zone Diagnostic Map</div>
+                      <p className="text-[10px] leading-relaxed text-muted">Shows which facial areas are affected by each concern so you can target treatment more precisely.</p>
+                    </div>
+                    <div className="rounded-xl p-2.5 bg-paper border border-border">
+                      <div className="text-[11px] font-semibold text-ink mb-0.5">Your Skin Profile</div>
+                      <p className="text-[10px] leading-relaxed text-muted">Summarizes overall skin health, estimated skin age, skin type, and undertone.</p>
+                    </div>
+                    <div className="rounded-xl p-2.5 bg-paper border border-border">
+                      <div className="text-[11px] font-semibold text-ink mb-0.5">Treatment Simulation</div>
+                      <p className="text-[10px] leading-relaxed text-muted">Projects how your concerns could improve over time with consistent care.</p>
+                    </div>
+                    <div className="rounded-xl p-2.5 bg-paper border border-border">
+                      <div className="text-[11px] font-semibold text-ink mb-0.5">Your Protocol</div>
+                      <p className="text-[10px] leading-relaxed text-muted">Morning, evening, and weekly routine suggestions matched to your top concerns.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>
