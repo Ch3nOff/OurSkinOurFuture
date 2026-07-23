@@ -23,6 +23,7 @@ import {
   HelpCircle,
   Info,
   BookOpen,
+  Download,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP, buildRoutine } from "@/lib/skinAnalysis";
@@ -190,6 +191,33 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setZoomedImage(null);
     setShowHelp(false);
     setTutorialStep(0);
+  }
+
+  function downloadScanReport() {
+    if (!analysis) return;
+    const report = {
+      exportedAt: new Date().toISOString(),
+      source: analysis.mock ? "Demo model" : "YouCam Skin Analysis",
+      imageUrl: imagePreview || null,
+      concerns: analysis.concerns || {},
+      zones: analysis.zones || {},
+      masks: analysis.masks || {},
+      overall: analysis.overall ?? null,
+      skinAge: analysis.skinAge ?? null,
+      skinTypes: analysis.skinTypes || [],
+      simulation: simulationResult || null,
+      recommendation: recommendation || null,
+      routine: routine || null,
+      preferences: prefs || null,
+      plan: plan || null,
+    };
+    const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `scan-report-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   async function fetchProducts() {
@@ -1202,6 +1230,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 {saveState === "saving" && "Saving..."}
                 {saveState === "saved" && "Saved ✓"}
                 {saveState === "error" && "Retry Save"}
+              </button>
+              <button
+                onClick={downloadScanReport}
+                disabled={!analysis}
+                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50"
+              >
+                <Download size={15} />
+                Download
               </button>
               <button
                 onClick={reset}
