@@ -49,7 +49,43 @@ This is the **OurSkinOurFuture** skin diagnostic built for the YouCam Skin AI ha
 - **M2 (Aug 5–8)**: backend proxy routes `/api/analyze` + `/api/simulate` holding the API key server-side (scaffold done; live calls pending keys)
 - **M3 (Aug 8–11)**: swap mocks; rebuild timeline around real images
 - **M4 (Aug 11–15)**: polish, screenshots, submission text, demo video
-- **M5 (Aug 15–17)**: buffer + submit with 12h margin
+- **M5 (Aug 15–17)**: buffer & submit with 12h margin
+
+## Live API Status (2026-07-22)
+- **Skin AI (`/s2s/v2.0/task/skin-analysis`)**: working. Returns `task_id`. Recent error `[DLQ] Max retries exhausted. Last error: list index out of range` appears intermittently on YouCam side; retry should mask it.
+- **Skin Simulation (`/s2s/v2.0/task/skin-simulation`)**: still returning 400 on all payload shapes. Expanded attempts to 6 variants.
+- **Apparel VTO endpoints**: all return 404 (`/task/apparel-try-on`, `/task/virtual-try-on`, `/task/vto`, `/s2s/v2.0/try-on`, `/task/apparel`, `/v1/apparel/try-on`). **Confirmed by user: VTO requires two inputs — user photo + garment image. Switched UX to garment-catalog selection flow.**
+
+## Current Structure
+| File | Purpose |
+|------|---------|
+| `app/page.js` | Landing page (pitch + "Try It Now!") |
+| `app/dashboard/DashboardClient.jsx` | Main app: capture, analyze, results, save, compare |
+| `app/auth/AuthForm.jsx` | Supabase sign in / sign up |
+| `app/api/analyze/route.js` | YouCam Skin Analysis (live API, mock fallback) |
+| `app/api/simulate/route.js` | YouCam Skin Simulation (live API, mock fallback, M2) |
+| `app/api/analyze-and-style/route.js` | Unified skin analysis + image upload |
+| `app/api/try-on/route.js` | **NEW** Garment-catalog VTO: `GET` returns color-matched wardrobe; `POST` accepts `userImage` + `garmentImage` |
+| `app/api/recommend/route.js` | Live Claude narrative, graceful fallback |
+| `app/api/progress-review/route.js` | Logged-in user progress review (last 30 days) |
+| `components/TimelineSlider.jsx` | Week 0–12 projection slider (calls `/api/simulate`) |
+| `components/FaceZoneMap.jsx` | SVG face + per-zone hotspot scores |
+| `components/IngredientCard.jsx` | Active-ingredient recommendation cards |
+| `components/ScanComparison.jsx` | Current vs. past scan comparison |
+| `lib/youcam.js` | YouCam Skin AI + Simulation client |
+| `lib/vto.js` | YouCam Apparel VTO client (user + garment image payloads) |
+| `lib/garmentCatalog.js` | **NEW** Curated wardrobe catalog with undertone/color-theory mapping |
+| `lib/imageUtils.js` | **NEW** Client-side photo-type detection + face crop |
+| `lib/skinAnalysis.js` | Domain logic: concerns, zones, ingredients, mocks, comparison math |
+| `lib/supabase/client.js`, `lib/supabase/server.js` | Browser + server Supabase clients |
+| `middleware.js` | Refreshes Supabase auth session |
+
+## Key Decisions
+- `@/*` alias resolves to repo root via `jsconfig.json` (Next.js honored over `tsconfig.json` because the app is JS, not TS). Do not reintroduce a `tsconfig.json` that maps `@/` to `src/`.
+- `next.config.js` holds the Supabase remote image pattern; `next.config.ts` was removed as a conflicting duplicate.
+- **Apparel VTO payload** (confirmed by user): requires `user_image` + `garment_image` inputs; it is an Image-to-Image Garment-Transfer API, not an automated styling engine.
+- **Garment catalog strategy**: pre-curated ~10 garments mapped to undertones + active concerns; replaces broken auto-style VTO flow.
+- `extractPalette` / `recommendPieces` removed from dashboard; replaced by `getGarmentsForUndertone`.
 
 ## Session History
 | Date | Changes |
@@ -59,4 +95,7 @@ This is the **OurSkinOurFuture** skin diagnostic built for the YouCam Skin AI ha
 | 2026-07-20 (2) | Fixed Vercel build: TS deps + removed conflicting `src/` tree; wired lint/typecheck |
 | 2026-07-20 (3) | Scaffolded `/api/simulate`, wired TimelineSlider to it, updated ROADMAP/Memory Bank |
 | 2026-07-20 (4) | Wired real YouCam Skin Analysis (`lib/youcam.js`) into `/api/analyze` w/ mock fallback; added `/api/qwen` (Qwen/DashScope) personalized plan; dashboard "routine" step (current products + lifestyle prefs); browsable History panel; extended `scans` table (routine/preferences/qwen_plan) + migration; `.env.example` |
-| 2026-07-22 | Verified `app/api/products/recommend/route.js` uses `await createClient()` and `app/dashboard/DashboardClient.jsx` products rendering uses confirmed schema field names — no JS changes needed |
+| 2026-07-22 (1) | Verified `app/api/products/recommend/route.js` uses `await createClient()` and `app/dashboard/DashboardClient.jsx` products rendering uses confirmed schema field names |
+| 2026-07-22 (2) | Intelligent photo detection (`lib/imageUtils.js`), unified `/api/analyze-and-style`, progress review (`/api/progress-review`), removed login CTA from landing page |
+| 2026-07-22 (3) | Fixed VTO UX: switched to garment-catalog flow (`lib/garmentCatalog.js`), updated `/api/try-on` to accept `userImage` + `garmentImage`, updated dashboard garment selection cards |
+| 2026-07-22 (4) | Expanded simulation payload attempts to 6 variants, added detailed YouCam request logging |
