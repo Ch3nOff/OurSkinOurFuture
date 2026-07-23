@@ -634,7 +634,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     const severity = score >= 61 ? "High" : score >= 31 ? "Moderate" : "Low";
                     const severityColor = score >= 61 ? "#B85C4A" : score >= 31 ? "#C9A876" : "#4A6355";
                     return (
-                      <div key={key} className="rounded-2xl p-3 bg-paper border border-border">
+                      <div key={key} className="group rounded-2xl p-3 bg-paper border border-border transition-all duration-200 hover:shadow-md hover:border-[#C9A876]/40 hover:-translate-y-0.5">
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-sm font-semibold text-ink">{label}</span>
                           <div className="flex items-center gap-2">
