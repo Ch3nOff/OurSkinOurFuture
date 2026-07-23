@@ -30,6 +30,7 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
   const [error, setError] = useState(null);
   const [finalScores, setFinalScores] = useState(null);
   const [ready, setReady] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
   const canvasRef = useRef(null);
   const imgARef = useRef(null);
   const imgBRef = useRef(null);
@@ -43,6 +44,7 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
     setProjectedImage(null);
     setFinalScores(null);
     setError(null);
+    setShowOriginal(false);
 
     async function load() {
       try {
@@ -106,17 +108,31 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
       const h = canvas.height;
       ctx.clearRect(0, 0, w, h);
 
-      ctx.globalAlpha = 1 - t;
-      ctx.drawImage(a, 0, 0, w, h);
+      if (showOriginal) {
+        ctx.fillStyle = "#FDFBF6";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(a, 0, 0, w / 2, h);
+        ctx.drawImage(b, w / 2, 0, w / 2, h);
 
-      ctx.globalAlpha = t;
-      ctx.drawImage(b, 0, 0, w, h);
+        ctx.fillStyle = "rgba(0,0,0,0.5)";
+        ctx.fillRect(w / 2 - 1, 0, 2, h);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "12px sans-serif";
+        ctx.fillText("Before", 10, 20);
+        ctx.fillText("After", w / 2 + 10, 20);
+      } else {
+        ctx.globalAlpha = 1 - t;
+        ctx.drawImage(a, 0, 0, w, h);
 
-      ctx.globalAlpha = 1;
+        ctx.globalAlpha = t;
+        ctx.drawImage(b, 0, 0, w, h);
+
+        ctx.globalAlpha = 1;
+      }
     };
 
     draw();
-  }, [t, baselineImage, projectedImage, ready]);
+  }, [t, baselineImage, projectedImage, ready, showOriginal]);
 
   const overallBaseline = overallScore(baselineConcerns || {});
   const overallNow = overallScore(currentScores);
@@ -178,6 +194,23 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
           </>
         )}
       </div>
+
+      {baselineImage && projectedImage && (
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => setShowOriginal(false)}
+            className={`flex-1 rounded-2xl py-2 text-xs font-semibold border transition-colors ${!showOriginal ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-border"}`}
+          >
+            Blended View
+          </button>
+          <button
+            onClick={() => setShowOriginal(true)}
+            className={`flex-1 rounded-2xl py-2 text-xs font-semibold border transition-colors ${showOriginal ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-border"}`}
+          >
+            Side by Side
+          </button>
+        </div>
+      )}
 
       <input
         type="range"
