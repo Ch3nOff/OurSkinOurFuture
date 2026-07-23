@@ -24,6 +24,7 @@ import {
   Info,
   BookOpen,
   Download,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { topConcerns, CONCERN_LABELS, concernExplanation, INGREDIENT_MAP, buildRoutine } from "@/lib/skinAnalysis";
@@ -364,6 +365,18 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     }
   }
 
+  async function deleteScan(scanId) {
+    if (!user) return;
+    try {
+      const { error } = await supabase.from("scans").delete().eq("id", scanId).eq("user_id", user.id);
+      if (error) throw error;
+      setHistory((prev) => prev.filter((h) => h.id !== scanId));
+    } catch (err) {
+      console.error("Delete failed:", err);
+      alert("Could not delete this scan. Please try again.");
+    }
+  }
+
   function loadPastScan(scan) {
     const safeConcerns = scan.concern_scores && typeof scan.concern_scores === "object" ? scan.concern_scores : {};
     const safeZones = scan.zone_scores && typeof scan.zone_scores === "object" ? scan.zone_scores : {};
@@ -586,39 +599,50 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                     const dateStr = isToday ? "Today" : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
                     const scoreColor = score == null ? "#9CA3AF" : score >= 70 ? "#4A6355" : score >= 40 ? "#C9A876" : "#B85C4A";
                     return (
-                      <button
-                        key={scan.id}
-                        onClick={() => loadPastScan(scan)}
-                        className="group relative rounded-2xl overflow-hidden bg-paper border border-border hover:border-gold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left"
-                      >
-                        {scan.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={scan.image_url} alt="" className="w-full aspect-[3/4] object-cover" />
-                        ) : (
-                          <div className="w-full aspect-[3/4] bg-border flex items-center justify-center">
-                            <ScanFace size={20} className="text-faint" />
+                      <div key={scan.id} className="relative group">
+                        <button
+                          onClick={() => loadPastScan(scan)}
+                          className="w-full rounded-2xl overflow-hidden bg-paper border border-border hover:border-gold transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md text-left"
+                        >
+                          {scan.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={scan.image_url} alt="" className="w-full aspect-[3/4] object-cover" />
+                          ) : (
+                            <div className="w-full aspect-[3/4] bg-border flex items-center justify-center">
+                              <ScanFace size={20} className="text-faint" />
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                          <div className="absolute top-2 right-2">
+                            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full text-paper" style={{ background: scoreColor }}>
+                              {score != null ? score : "—"}
+                            </span>
                           </div>
-                        )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                        <div className="absolute top-2 right-2">
-                          <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full text-paper" style={{ background: scoreColor }}>
-                            {score != null ? score : "—"}
-                          </span>
-                        </div>
-                        <div className="absolute bottom-0 left-0 right-0 p-2.5">
-                          <div className="text-[11px] font-semibold text-paper truncate">
-                            {dateStr} · {timeStr}
+                          <div className="absolute bottom-0 left-0 right-0 p-2.5">
+                            <div className="text-[11px] font-semibold text-paper truncate">
+                              {dateStr} · {timeStr}
+                            </div>
+                            <div className="text-[10px] text-white/70 truncate">
+                              {top ? `${top.key}: ${top.score}` : scan.mock ? "Demo scan" : "View details"}
+                            </div>
                           </div>
-                          <div className="text-[10px] text-white/70 truncate">
-                            {top ? `${top.key}: ${top.score}` : scan.mock ? "Demo scan" : "View details"}
-                          </div>
-                        </div>
-                        {scan.mock && (
-                          <div className="absolute top-2 left-2">
-                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-white/80 backdrop-blur">DEMO</span>
-                          </div>
-                        )}
-                      </button>
+                          {scan.mock && (
+                            <div className="absolute top-2 left-2">
+                              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-black/40 text-white/80 backdrop-blur">DEMO</span>
+                            </div>
+                          )}
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteScan(scan.id);
+                          }}
+                          className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full bg-clay/90 text-paper flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Delete scan"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -1336,6 +1360,15 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                 <Download size={15} />
                 Download
               </button>
+              {viewingHistory && lastSavedScanId && (
+                <button
+                  onClick={() => deleteScan(lastSavedScanId)}
+                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-clay text-paper active:scale-[0.98] transition-transform"
+                >
+                  <Trash2 size={15} />
+                  Delete
+                </button>
+              )}
               <button
                 onClick={reset}
                 className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform"
