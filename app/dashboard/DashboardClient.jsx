@@ -626,7 +626,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   .filter(([, score]) => typeof score === "number")
                   .sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))
                   .map(([key, score]) => {
-                    const label = CONCERN_LABELS[key] || key;
+                    const label = typeof CONCERN_LABELS[key] === "string" ? CONCERN_LABELS[key] : CONCERN_LABELS[key]?.label || key;
                     const explanation = concernExplanation(key);
                     const ingredients = INGREDIENT_MAP[key] || [];
                     const severity = score >= 61 ? "High" : score >= 31 ? "Moderate" : "Low";
@@ -755,7 +755,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                   return (
                     <div key={c.key}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-medium text-ink">{CONCERN_LABELS[c.key] || c.key}</span>
+                          <span className="text-xs font-medium text-ink">{(typeof CONCERN_LABELS[c.key] === "string" ? CONCERN_LABELS[c.key] : CONCERN_LABELS[c.key]?.label || c.key)}{c.icon ? ` ${c.icon}` : ""}</span>
                         <span className="text-[11px] font-mono text-muted">{pct}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-[#F0EBDD] overflow-hidden">
@@ -833,7 +833,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
                       <g key={c.key}>
                         <circle cx={x} cy={y} r="3" fill="#C9A876" />
                         <text x={x + (Math.cos(angle) > 0 ? 6 : -6)} y={y + 3} textAnchor={Math.cos(angle) > 0 ? "start" : "end"} className="text-[8px] fill-muted">
-                          {CONCERN_LABELS[c.key] || c.key}
+                          {(typeof CONCERN_LABELS[c.key] === "string" ? CONCERN_LABELS[c.key] : CONCERN_LABELS[c.key]?.label || c.key)}
                         </text>
                       </g>
                     );
