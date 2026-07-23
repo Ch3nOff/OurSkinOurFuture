@@ -78,6 +78,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [showHelp, setShowHelp] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const [analyzing, setAnalyzing] = useState(false);
+  const [glassesConfirmStep, setGlassesConfirmStep] = useState(0);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -115,6 +116,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setViewingHistory(false);
     setStage("analyzing");
     setAnalyzing(true);
+    setGlassesConfirmStep(0);
 
     try {
       const res = await fetch("/api/analyze", {
@@ -166,6 +168,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
       message: data.ok ? "Face validated — proceeding to analysis" : "Please adjust your photo",
       hasGlasses: data.hasGlasses || false,
     }));
+    setGlassesConfirmStep(0);
   }
 
   function reset() {
@@ -652,13 +655,23 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </button>
               <button
                 onClick={() => {
+                  if (validation.hasGlasses) {
+                    if (glassesConfirmStep === 0) {
+                      setGlassesConfirmStep(1);
+                      return;
+                    }
+                  }
                   const seed = imagePreview.length + Date.now();
                   runAnalysis(imagePreview, seed);
                 }}
                 disabled={analyzing}
-                className="flex-1 rounded-2xl py-3 text-xs font-semibold bg-ink text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
+                className={`flex-1 rounded-2xl py-3 text-xs font-semibold active:scale-[0.98] transition-transform disabled:opacity-70 ${
+                  validation.hasGlasses && glassesConfirmStep === 0
+                    ? "bg-gold text-paper"
+                    : "bg-ink text-paper"
+                }`}
               >
-                {analyzing ? "Analyzing..." : "Continue to Analysis"}
+                {analyzing ? "Analyzing..." : validation.hasGlasses && glassesConfirmStep === 0 ? "Tap again to scan anyway" : "Continue to Analysis"}
               </button>
             </div>
           </div>
