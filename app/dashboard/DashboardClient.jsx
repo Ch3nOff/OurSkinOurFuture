@@ -41,6 +41,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [tryOnResult, setTryOnResult] = useState(null);
   const [tryOnLoading, setTryOnLoading] = useState(false);
   const [tryOnError, setTryOnError] = useState(null);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const [garments, setGarments] = useState([]);
   const [selectedGarment, setSelectedGarment] = useState(null);
@@ -152,6 +153,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setTryOnResult(null);
     setTryOnLoading(false);
     setTryOnError(null);
+    setShowOriginal(false);
     setGarments([]);
     setSelectedGarment(null);
     setGarmentLoading(false);
@@ -927,19 +929,34 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               {tryOnResult ? (
                 <div className="space-y-3">
                   <div className="rounded-2xl overflow-hidden border border-border bg-paper relative">
-                    {tryOnResult.tryOnImage ? (
-                      <img src={tryOnResult.tryOnImage} alt="Try-on result" className="w-full aspect-[3/4] object-contain" style={{ background: "#FDFBF6" }} />
-                    ) : (
-                      <div className="aspect-[3/4] flex items-center justify-center text-[11px] text-faint">No try-on image returned</div>
-                    )}
+                    <img
+                      src={showOriginal ? imagePreview : tryOnResult.tryOnImage}
+                      alt={showOriginal ? "Original" : "Try-on result"}
+                      className="w-full aspect-[3/4] object-contain"
+                      style={{ background: "#FDFBF6" }}
+                    />
                     {tryOnResult.mock && (
                       <span className="absolute top-2 right-2 text-[10px] font-mono uppercase tracking-widest px-2 py-0.5 rounded-full bg-ink/80 text-paper backdrop-blur-sm">
                         Demo Preview
                       </span>
                     )}
                   </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setShowOriginal(false)}
+                      className={`flex-1 rounded-2xl py-2.5 text-xs font-semibold border transition-colors ${!showOriginal ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-border"}`}
+                    >
+                      Try-On Result
+                    </button>
+                    <button
+                      onClick={() => setShowOriginal(true)}
+                      className={`flex-1 rounded-2xl py-2.5 text-xs font-semibold border transition-colors ${showOriginal ? "bg-ink text-paper border-ink" : "bg-paper text-ink border-border"}`}
+                    >
+                      Original Photo
+                    </button>
+                  </div>
                   <button
-                    onClick={() => { setTryOnResult(null); setTryOnError(null); }}
+                    onClick={() => { setTryOnResult(null); setTryOnError(null); setShowOriginal(false); }}
                     className="w-full rounded-2xl py-2.5 text-xs font-semibold bg-paper text-ink border border-border active:scale-[0.98] transition-transform"
                   >
                     Back to wardrobe
