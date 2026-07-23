@@ -767,6 +767,29 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </div>
             </section>
 
+            {(() => {
+              const top = topConcerns(analysis.concerns, 3);
+              if (top.length === 0) return null;
+              const avg = Math.round(top.reduce((s, c) => s + c.score, 0) / top.length);
+              const label = avg >= 70 ? "Needs attention" : avg >= 40 ? "Moderate" : "Good";
+              const gradient = avg >= 70 ? "from-[#B85C4A]/20 to-[#C9A876]/20" : avg >= 40 ? "from-[#C9A876]/20 to-[#E8B4B8]/20" : "from-[#4A6355]/20 to-[#9DC183]/20";
+              return (
+                <section className={`rounded-3xl p-6 mb-4 bg-gradient-to-br ${gradient} border border-border`}>
+                  <div className="text-xs font-mono uppercase tracking-widest mb-2 text-muted">Skin Health Snapshot</div>
+                  <div className="flex items-end justify-between">
+                    <div>
+                      <div className="text-3xl font-semibold text-ink">{avg}</div>
+                      <div className="text-[11px] text-muted">Average top-concern score</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-ink">{label}</div>
+                      <div className="text-[11px] text-muted">Based on your 3 biggest areas</div>
+                    </div>
+                  </div>
+                </section>
+              );
+            })()}
+
             <section className="rounded-3xl p-6 mb-4 bg-card border border-border">
               <div className="text-xs font-mono uppercase tracking-widest mb-4 text-muted">Your Color Harmony</div>
               <p className="text-[11px] text-muted mb-3">Based on your undertone and active concerns, these hues will complement your complexion.</p>
