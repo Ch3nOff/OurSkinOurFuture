@@ -1,35 +1,6 @@
 import { NextResponse } from "next/server";
 import { mockSkinAnalysis } from "@/lib/skinAnalysis";
-import { analyzeWithYouCamFromUrl, friendlyYouCamError } from "@/lib/youcam";
-
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-async function uploadToSupabase(buffer, contentType) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    throw new Error("Supabase not configured");
-  }
-  const path = `scans/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const url = `${SUPABASE_URL}/storage/v1/object/scan-photos/${path}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": contentType,
-      "x-upsert": "true",
-    },
-    body: buffer,
-  });
-
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Supabase upload failed (${res.status}): ${t}`);
-  }
-
-  const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/scan-photos/${path}`;
-  return publicUrl;
-}
+import { uploadImage, startTask, pollTask, mapOutput, clamp, friendlyYouCamError } from "@/lib/youcam";
 
 export async function POST(request) {
   try {
@@ -53,25 +24,56 @@ export async function POST(request) {
     const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
     const buffer = Buffer.from(b64, "base64");
 
-    // Upload to Supabase Storage so we get a public URL that YouCam can
-    // download without any special headers (avoids S3 pre-signed URL
-    // download failures).
-    const publicUrl = await uploadToSupabase(buffer, contentType);
+    const { fileId } = await uploadImage(buffer, contentType, "skin-analysis");
 
-    const { concerns, zones, masks, overall, skinAge, skinTypes, resizeImage } =
-      await analyzeWithYouCamFromUrl(publicUrl);
+    const taskId = await startTask("skin-analysis", {
+      src_file_id: fileId,
+      dst_actions: [
+        "acne",
+        "wrinkle",
+        "redness",
+        "dark_circle_v2",
+        "pore",
+        "texture",
+        "age_spot",
+        "moisture",
+        "tear_trough",
+        "droopy_upper_eyelid",
+        "droopy_lower_eyelid",
+        "eye_bag",
+        "firmness",
+        "oiliness",
+        "radiance",
+        "skin_type",
+      ],
+      miniserver_args: { enable_mask_overlay: true },
+      format: "json",
+      pf_camera_kit: false,
+    });
 
-    await new Promise((resolve) => setTimeout(resolve, 300));
+    const result = await pollTask("skin-analysis", taskId);
+
+    const output = result?.data?.results?.output || [];
+    const { concerns, masks, extras } = mapOutput(output);
+
+    const vals = Object.values(concerns);
+    const avg = vals.length ? Math.round(vals.reduce((a, b) => a + b, 0) / vals.length) : 50;
 
     return NextResponse.json({
       concerns,
-      zones,
+      zones: {
+        forehead: clamp(avg + 3),
+        nose: clamp(avg - 4),
+        leftCheek: clamp(avg - 1),
+        rightCheek: clamp(avg - 1),
+        chin: clamp(avg + 1),
+        underEye: clamp(avg - 8),
+      },
       masks,
-      overall,
-      skinAge,
-      skinTypes,
-      resizeImage,
-      imageUrl: publicUrl,
+      overall: extras.overall ?? avg,
+      skinAge: extras.skinAge ?? null,
+      skinTypes: extras.skinTypes ?? [],
+      resizeImage: extras.resizeImage ?? null,
       mock: false,
     });
   } catch (err) {
@@ -182,8 +184,23 @@ async function analyzeFromBuffer(dataUrl, mode) {
     return { faceAttributes: output };
   }
 
-  const { concerns, masks, extras } = mapOutput(output);
-  return { concerns, zones, masks, overall: extras.overall, skinAge: extras.skinAge, skinTypes: extras.skinTypes, resizeImage: extras.resizeImage };
+  const { concerns, zones, masks, overall } = mapOutput(output);
+  return { concerns, zones, masks, overall };
+}
+
+const BASE = (process.env.YOUCAM_API_BASE || "https://yce-api-01.makeupar.com").replace(/\/$/, "");
+
+function authHeaders() {
+  const key = process.env.YOUCAM_API_KEY;
+  if (!key) {
+    const err = new Error("YOUCAM_API_KEY is not configured on the server.");
+    err.status = 500;
+    throw err;
+  }
+  return {
+    Authorization: `Bearer ${key}`,
+    "Content-Type": "application/json",
+  };
 }
 
 function getDstActions() {

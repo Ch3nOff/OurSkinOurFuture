@@ -2,34 +2,6 @@ import { NextResponse } from "next/server";
 import { mockSimulation } from "@/lib/skinAnalysis";
 import { simulateWithYouCamFromUrl } from "@/lib/youcam";
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-async function uploadToSupabase(buffer, contentType) {
-  if (!SUPABASE_URL || !SUPABASE_KEY) {
-    throw new Error("Supabase not configured");
-  }
-  const path = `scans/sim-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
-  const url = `${SUPABASE_URL}/storage/v1/object/scan-photos/${path}`;
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${SUPABASE_KEY}`,
-      "Content-Type": contentType,
-      "x-upsert": "true",
-    },
-    body: buffer,
-  });
-
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`Supabase upload failed (${res.status}): ${t}`);
-  }
-
-  return `${SUPABASE_URL}/storage/v1/object/public/scan-photos/${path}`;
-}
-
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -55,10 +27,7 @@ export async function POST(request) {
 
     let publicUrl = image;
     if (image.startsWith("data:")) {
-      const [meta, b64] = image.split(",");
-      const contentType = (meta.match(/data:(.*?);/) || [])[1] || "image/jpeg";
-      const buffer = Buffer.from(b64, "base64");
-      publicUrl = await uploadToSupabase(buffer, contentType);
+      publicUrl = image;
     }
 
     let projectedImages = null;
