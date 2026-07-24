@@ -1211,7 +1211,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </section>
             )}
 
-            <div className="flex flex-wrap gap-2.5">
+            <div className="mt-6 flex flex-wrap gap-2.5">
               {!viewingHistory && (
                 <button
                   onClick={handleSave}
