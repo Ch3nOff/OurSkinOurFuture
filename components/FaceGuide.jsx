@@ -26,6 +26,7 @@ export default function FaceGuide({ image, onValidate }) {
       if (img.width < 200 || img.height < 200) {
         setStatus("error");
         setMessage("Photo is too small. Please use a higher resolution image.");
+        if (onValidate) onValidate({ status: "error", message: "Photo is too small. Please use a higher resolution image.", hasGlasses: false });
         return;
       }
 
@@ -33,6 +34,7 @@ export default function FaceGuide({ image, onValidate }) {
       if (aspect < 0.6 || aspect > 1.8) {
         setStatus("error");
         setMessage("Please use a portrait or square photo facing the camera directly.");
+        if (onValidate) onValidate({ status: "error", message: "Please use a portrait or square photo facing the camera directly.", hasGlasses: false });
         return;
       }
 
@@ -63,6 +65,9 @@ export default function FaceGuide({ image, onValidate }) {
     } catch {
       setStatus("error");
       setMessage("Could not process this image. Please try another.");
+      if (onValidate) {
+        onValidate({ status: "error", message: "Could not process this image. Please try another.", hasGlasses: false });
+      }
     }
   }
 
