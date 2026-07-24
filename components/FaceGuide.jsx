@@ -253,23 +253,24 @@ export default function FaceGuide({ image, onValidate }) {
   async function detectGlassesWithTM(img) {
     if (typeof window === "undefined") return false;
 
-      if (!tmModelCache && !tmLoading) {
-        tmLoading = true;
-        try {
-          const [{ load }] = await Promise.all([
-            import("@teachablemachine/image"),
-            import("@tensorflow/tfjs"),
-          ]);
-          tmModelCache = await load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
-        } catch (e) {
-          console.warn("TM load failed:", e);
-          tmLoading = false;
-          validatingRef.current = false;
-          return false;
-        }
+    if (!tmModelCache && !tmLoading) {
+      tmLoading = true;
+      try {
+        const [tmImageModule] = await Promise.all([
+          import("@teachablemachine/image"),
+          import("@tensorflow/tfjs"),
+        ]);
+        const tmImage = tmImageModule.default;
+        tmModelCache = await tmImage.load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
+      } catch (e) {
+        console.warn("TM load failed:", e);
         tmLoading = false;
         validatingRef.current = false;
+        return false;
       }
+      tmLoading = false;
+      validatingRef.current = false;
+    }
 
     if (!tmModelCache) return false;
 
