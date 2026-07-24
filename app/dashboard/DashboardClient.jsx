@@ -761,34 +761,14 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </button>
             </div>
 
-             {/* Save button - available immediately on results */}
-             {!viewingHistory && (
-               <div className="mb-4">
-                 <button
-                   onClick={handleSave}
-                   disabled={saveState === "saving" || saveState === "saved"}
-                   className="w-full rounded-2xl py-3 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70"
-                 >
-                   {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
-                   {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
-                   {saveState === "saving" && "Saving..."}
-                   {saveState === "saved" && "Saved ✓"}
-                   {saveState === "error" && "Retry Save"}
-                 </button>
-               {saveState === "error" && (
-                 <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
-               )}
-               </div>
-             )}
-
-             <button
-               onClick={() => setStage("routine")}
-               className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-gold text-ink active:scale-[0.98] transition-transform mb-5"
-             >
-               <ClipboardList size={16} />
-               What should I do? (Your routine + lifestyle)
-               <ChevronRight size={16} />
-             </button>
+              <button
+                onClick={() => setStage("routine")}
+                className="w-full rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-gold text-ink active:scale-[0.98] transition-transform"
+              >
+                <ClipboardList size={16} />
+                What should I do? (Your routine + lifestyle)
+                <ChevronRight size={16} />
+              </button>
 
              {/* Analysis Summary: overall + per-concern breakdown */}
             <section className="rounded-3xl p-5 mb-4 bg-card border border-border">
@@ -1352,49 +1332,49 @@ export default function DashboardClient({ initialUser, initialHistory }) {
               </section>
             )}
 
-            <div className="flex flex-wrap gap-2.5">
-              {!viewingHistory && (
-                <button
-                  onClick={handleSave}
-                  disabled={saveState === "saving" || saveState === "saved"}
-                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70 min-w-[120px]"
-                >
-                  {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
-                  {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
-                  {saveState === "saving" && "Saving..."}
-                  {saveState === "saved" && "Saved ✓"}
-                  {saveState === "error" && "Retry Save"}
-                </button>
-              )}
-              <button
-                onClick={downloadScanReport}
-                disabled={!analysis}
-                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50 min-w-[120px]"
-              >
-                <Download size={15} />
-                Download
-              </button>
-              {viewingHistory && lastSavedScanId && (
-                <button
-                  onClick={() => {
-                    if (confirm("Delete this scan? This cannot be undone.")) {
-                      deleteScan(lastSavedScanId);
-                    }
-                  }}
-                  className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-clay text-paper active:scale-[0.98] transition-transform min-w-[120px]"
-                >
-                  <Trash2 size={15} />
-                  Delete
-                </button>
-              )}
-              <button
-                onClick={reset}
-                className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform min-w-[120px]"
-              >
-                Scan Another
-                <ChevronRight size={16} />
-              </button>
-            </div>
+             <div className="mt-5 flex flex-wrap gap-2.5">
+               {!viewingHistory && (
+                 <button
+                   onClick={handleSave}
+                   disabled={saveState === "saving" || saveState === "saved"}
+                   className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-sage text-paper active:scale-[0.98] transition-transform disabled:opacity-70 min-w-[120px]"
+                 >
+                   {saveState === "saving" && <Loader2 size={15} className="animate-spin" />}
+                   {saveState === "idle" && (user ? "Save This Test" : "Sign In to Save")}
+                   {saveState === "saving" && "Saving..."}
+                   {saveState === "saved" && "Saved ✓"}
+                   {saveState === "error" && "Retry Save"}
+                 </button>
+               )}
+               <button
+                 onClick={downloadScanReport}
+                 disabled={!analysis}
+                 className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-card border border-border text-ink active:scale-[0.98] transition-transform disabled:opacity-50 min-w-[120px]"
+               >
+                 <Download size={15} />
+                 Download
+               </button>
+               {viewingHistory && lastSavedScanId && (
+                 <button
+                   onClick={() => {
+                     if (confirm("Delete this scan? This cannot be undone.")) {
+                       deleteScan(lastSavedScanId);
+                     }
+                   }}
+                   className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-clay text-paper active:scale-[0.98] transition-transform min-w-[120px]"
+                 >
+                   <Trash2 size={15} />
+                   Delete
+                 </button>
+               )}
+               <button
+                 onClick={reset}
+                 className="flex-1 rounded-2xl py-3.5 flex items-center justify-center gap-2 text-sm font-semibold bg-ink text-paper active:scale-[0.98] transition-transform min-w-[120px]"
+               >
+                 Scan Another
+                 <ChevronRight size={16} />
+               </button>
+             </div>
             {saveState === "error" && !viewingHistory && (
               <p className="text-xs text-clay mt-2 text-center">Couldn't save — {saveError || "check your connection and try again."}</p>
             )}
