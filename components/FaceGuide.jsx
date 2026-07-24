@@ -9,6 +9,7 @@ export default function FaceGuide({ image, onValidate }) {
   const [message, setMessage] = useState("Waiting for photo...");
   const [glassesDetected, setGlassesDetected] = useState(false);
   const canvasRef = useRef(null);
+  const validatingRef = useRef(false);
 
   useEffect(() => {
     if (!image) return;
@@ -16,57 +17,72 @@ export default function FaceGuide({ image, onValidate }) {
   }, [image]);
 
   async function validateImage(dataUrl) {
-    setStatus("checking");
+    if (validatingRef.current) return;
+    validatingRef.current = true;
+    let currentStatus = "checking";
+    let currentMessage = "Checking face position and quality...";
+    setStatus(currentStatus);
     setGlassesDetected(false);
-    setMessage("Checking face position and quality...");
+    setMessage(currentMessage);
 
     try {
       const img = await loadImage(dataUrl);
 
       if (img.width < 200 || img.height < 200) {
-        setStatus("error");
-        setMessage("Photo is too small. Please use a higher resolution image.");
-        if (onValidate) onValidate({ status: "error", message: "Photo is too small. Please use a higher resolution image.", hasGlasses: false });
+        currentStatus = "error";
+        currentMessage = "Photo is too small. Please use a higher resolution image.";
+        setStatus(currentStatus);
+        setMessage(currentMessage);
+        if (onValidate) onValidate({ status: currentStatus, message: currentMessage, hasGlasses: false });
         return;
       }
 
       const aspect = img.width / img.height;
       if (aspect < 0.6 || aspect > 1.8) {
-        setStatus("error");
-        setMessage("Please use a portrait or square photo facing the camera directly.");
-        if (onValidate) onValidate({ status: "error", message: "Please use a portrait or square photo facing the camera directly.", hasGlasses: false });
+        currentStatus = "error";
+        currentMessage = "Please use a portrait or square photo facing the camera directly.";
+        setStatus(currentStatus);
+        setMessage(currentMessage);
+        if (onValidate) onValidate({ status: currentStatus, message: currentMessage, hasGlasses: false });
         return;
       }
 
       const brightness = await estimateBrightness(img);
       if (brightness < 40) {
-        setStatus("warning");
-        setMessage("Image is quite dark. Better lighting will improve accuracy.");
+        currentStatus = "warning";
+        currentMessage = "Image is quite dark. Better lighting will improve accuracy.";
       } else if (brightness > 220) {
-        setStatus("warning");
-        setMessage("Image is very bright. Try reducing direct light.");
+        currentStatus = "warning";
+        currentMessage = "Image is very bright. Try reducing direct light.";
       } else {
-        setStatus("good");
-        setMessage("Good lighting detected.");
+        currentStatus = "good";
+        currentMessage = "Good lighting detected.";
       }
+      setStatus(currentStatus);
+      setMessage(currentMessage);
 
       const hasGlasses = await detectGlasses(img);
       if (hasGlasses) {
         setGlassesDetected(true);
-        setMessage((prev) => prev + " Glasses detected — please remove them for accurate skin analysis.");
-        setStatus("warning");
+        currentMessage = currentMessage + " Glasses detected — please remove them for accurate skin analysis.";
+        currentStatus = "warning";
+        setMessage(currentMessage);
+        setStatus(currentStatus);
       } else {
-        setMessage((prev) => prev + " No glasses detected.");
+        currentMessage = currentMessage + " No glasses detected.";
+        setMessage(currentMessage);
       }
 
       if (onValidate) {
-        onValidate({ status, message, hasGlasses });
+        onValidate({ ok: true, status: currentStatus, message: currentMessage, hasGlasses });
       }
     } catch {
-      setStatus("error");
-      setMessage("Could not process this image. Please try another.");
+      currentStatus = "error";
+      currentMessage = "Could not process this image. Please try another.";
+      setStatus(currentStatus);
+      setMessage(currentMessage);
       if (onValidate) {
-        onValidate({ status: "error", message: "Could not process this image. Please try another.", hasGlasses: false });
+        onValidate({ status: currentStatus, message: currentMessage, hasGlasses: false });
       }
     }
   }
@@ -237,21 +253,23 @@ export default function FaceGuide({ image, onValidate }) {
   async function detectGlassesWithTM(img) {
     if (typeof window === "undefined") return false;
 
-    if (!tmModelCache && !tmLoading) {
-      tmLoading = true;
-      try {
-        const [{ load }] = await Promise.all([
-          import("@teachablemachine/image"),
-          import("@tensorflow/tfjs"),
-        ]);
-        tmModelCache = await load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
-      } catch (e) {
-        console.warn("TM load failed:", e);
+      if (!tmModelCache && !tmLoading) {
+        tmLoading = true;
+        try {
+          const [{ load }] = await Promise.all([
+            import("@teachablemachine/image"),
+            import("@tensorflow/tfjs"),
+          ]);
+          tmModelCache = await load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
+        } catch (e) {
+          console.warn("TM load failed:", e);
+          tmLoading = false;
+          validatingRef.current = false;
+          return false;
+        }
         tmLoading = false;
-        return false;
+        validatingRef.current = false;
       }
-      tmLoading = false;
-    }
 
     if (!tmModelCache) return false;
 
