@@ -404,7 +404,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setSimulationResult(scan.simulation && typeof scan.simulation === "object" ? scan.simulation : null);
     setLastSavedScanId(scan.id || null);
     setStage("results");
-    setShowHistory(false);
     setViewingHistory(true);
   }
 
