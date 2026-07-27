@@ -56,7 +56,7 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 - **Face validation flow**: capture/upload → FaceGuide checks brightness, aspect ratio, glasses → analyze → results
 - **Glasses detection**: Primary via YouCam `face-attribute` API; fallback heuristic on eye-region dark-pixel ratio
 - **Camera guidance**: Face guide overlay in upload screen with "Center face · No glasses" prompt
-- **Simulation**: TimelineSlider calls `/api/simulate` → `simulateWithYouCamFromUrl` with 6 payload variants; real images pending YouCam endpoint acceptance
+- **Simulation**: TimelineSlider calls `/api/simulate` → `simulateWithYouCamFromUrl` with 3 payload variants (src_file_url, src_file_id via direct YouCam upload, data URL buffer via `uploadImage`); data URL inputs work correctly
 
 ## Next Milestones
 - **M1**: Confirm YouCam redeem code, run both APIs via curl, capture real response shape
@@ -67,7 +67,7 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 
 ## Live API Status
 - **Skin AI (`/s2s/v2.0/task/skin-analysis`)**: working. Returns `task_id`. Recent error `[DLQ] Max retries exhausted. Last error: list index out of range` appears intermittently on YouCam side; retry should mask it.
-- **Skin Simulation (`/s2s/v2.0/task/skin-simulation`)**: still returning 400 on all payload shapes. Expanded attempts to 6 variants.
+- **Skin Simulation (`/s2s/v2.0/task/skin-simulation`)**: working with flat payload (underscore keys); data URL inputs now supported via direct YouCam S3 `uploadImage` path
 - **Face Attribute (`/s2s/v2.0/task/face-attribute`)**: available for glasses detection and face metrics.
 
 ## Session History
@@ -88,3 +88,4 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 | 2026-07-23 (2) | **OurSkinOurFuture pivot**: rebranded to clinical skin suite, added FaceGuide validation component, glasses detection API (`/api/glasses-detect`), updated all section copy to diagnostic terminology |
 | 2026-07-23 (3) | **Save + zone map fixes**: `handleSave` now persists `masks`, `overall_score`, `skin_age`, `skin_types`, `mock`, `resize_image`; added `migration_add_youcam_fields.sql`; fixed `FaceZoneMap` mask positioning by adding explicit `x/y/w/h` to `POSITIONS` |
 | 2026-07-23 (4) | **Simulation persistence**: added `scans.simulation` JSONB column; `TimelineSlider` accepts `savedSimulation` prop and `onSimulationReady` callback; DashboardClient stores simulation in state and saves it with the scan; viewing history reuses saved simulation instead of calling `/api/simulate` again; redesigned history panel as visual Scan Timeline grid with score badges and demo tags |
+| 2026-07-26 (1) | **Simulation data URL fix**: `simulateWithYouCamFromUrl` third fallback parses data URLs via `uploadImage(buffer, contentType, "skin-simulation")` + `src_file_id`; TimelineSlider error handler calls `onSimulationReady` with mock fallback; `DashboardClient` persists `simulationResult` to localStorage and loads it as DB fallback in `loadPastScan`; Stop Supabase upload from `/api/analyze` + `/api/simulate` for anonymous users |
