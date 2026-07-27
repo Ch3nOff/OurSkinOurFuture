@@ -18,7 +18,7 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 - [x] **Face guide UI**: Upload screen shows a dashed oval guide with "Center face · No glasses" prompt. Validation results appear after photo capture.
 - [x] **Clinical section naming**: Diagnostic Summary, Zone Diagnostic Map, Concern Severity, Your Protocol, Treatment Simulation.
 - [x] **Enhanced `/api/analyze`**: Supports `GET?mode=color-tone` and `GET?mode=face-attribute` for additional YouCam endpoints.
-- [x] **Simulation wiring**: TimelineSlider calls `/api/simulate` → `simulateWithYouCamFromUrl` with 6 payload variants. Real images pending YouCam endpoint acceptance.
+- [x] **Simulation wiring**: TimelineSlider calls `/api/simulate` → `simulateWithYouCamFromUrl` with 3 payload variants (src_file_url, src_file_id via direct YouCam upload, data URL buffer via uploadImage); data URL inputs work correctly; simulation results persist via DB and localStorage fallback
 - [x] Build / lint / typecheck all pass
 
 ## Explicitly MOCKED (per roadmap, replace before submission)
@@ -89,3 +89,4 @@ This is **OurSkinOurFuture** — a Predictive Clinical Skin Suite built for the 
 | 2026-07-23 (3) | **Save + zone map fixes**: `handleSave` now persists `masks`, `overall_score`, `skin_age`, `skin_types`, `mock`, `resize_image`; added `migration_add_youcam_fields.sql`; fixed `FaceZoneMap` mask positioning by adding explicit `x/y/w/h` to `POSITIONS` |
 | 2026-07-23 (4) | **Simulation persistence**: added `scans.simulation` JSONB column; `TimelineSlider` accepts `savedSimulation` prop and `onSimulationReady` callback; DashboardClient stores simulation in state and saves it with the scan; viewing history reuses saved simulation instead of calling `/api/simulate` again; redesigned history panel as visual Scan Timeline grid with score badges and demo tags |
 | 2026-07-26 (1) | **Simulation data URL fix**: `simulateWithYouCamFromUrl` third fallback parses data URLs via `uploadImage(buffer, contentType, "skin-simulation")` + `src_file_id`; TimelineSlider error handler calls `onSimulationReady` with mock fallback; `DashboardClient` persists `simulationResult` to localStorage and loads it as DB fallback in `loadPastScan`; Stop Supabase upload from `/api/analyze` + `/api/simulate` for anonymous users |
+| 2026-07-26 (2) | **Full scan persistence fix**: `handleSave` now includes `resize_image: analysis.resizeImage` column so concern photos and YouCam-resized images are saved to DB; all concern masks, simulation results, and photo data now fully saved on every save |
