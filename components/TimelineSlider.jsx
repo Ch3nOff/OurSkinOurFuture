@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from "react";
 import { TrendingUp, AlertCircle } from "lucide-react";
-import { topConcerns, overallScore } from "@/lib/skinAnalysis";
+import { topConcerns, overallScore, mockSimulation } from "@/lib/skinAnalysis";
 
 function interpolateScores(baseline, projected, t) {
   const result = {};
@@ -93,7 +93,18 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         if (cancelled) return;
         setError(err.message || "Simulation failed");
         setBaselineImage(image);
+        const fallback = mockSimulation(baselineConcerns || {}, totalWeeks > 0 ? week : 0, totalWeeks);
+        setFinalScores(fallback);
+        setSimulated(fallback);
         setReady(true);
+        if (typeof onSimulationReady === "function") {
+          onSimulationReady({
+            projectedScores: fallback,
+            projectedImage: null,
+            baselineImage: image,
+            mock: true,
+          });
+        }
       }
     }
 

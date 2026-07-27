@@ -108,6 +108,13 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     return () => { cancelled = true; };
   }, [user, lastSavedScanId, simulationResult]);
 
+  useEffect(() => {
+    if (!simulationResult || Object.keys(simulationResult).length === 0) return;
+    try {
+      localStorage.setItem("last_simulation_result", JSON.stringify(simulationResult));
+    } catch {}
+  }, [simulationResult]);
+
   async function runAnalysis(dataUrl, seed) {
     if (analyzing) return;
     setImagePreview(dataUrl);
@@ -194,6 +201,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setValidation({ status: "idle", message: "", hasGlasses: false });
     setViewingHistory(false);
     setSimulationResult(null);
+    try { localStorage.removeItem("last_simulation_result"); } catch {}
     setLastSavedScanId(null);
     setConcernPage(0);
     setZoomedImage(null);
@@ -401,7 +409,15 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     } else {
       setPrefs({ sleep: "", sunExposure: "", diet: "", stress: "", activity: "" });
     }
-    setSimulationResult(scan.simulation && typeof scan.simulation === "object" ? scan.simulation : null);
+    const savedSim = scan.simulation && typeof scan.simulation === "object" ? scan.simulation : null;
+    if (!savedSim) {
+      try {
+        const local = localStorage.getItem("last_simulation_result");
+        if (local) setSimulationResult(JSON.parse(local));
+      } catch {}
+    } else {
+      setSimulationResult(savedSim);
+    }
     setLastSavedScanId(scan.id || null);
     setStage("results");
     setViewingHistory(true);
