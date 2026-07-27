@@ -464,8 +464,9 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           recommendation_text: recommendation,
           routine: routine || null,
           preferences: prefs || null,
-          qwen_plan: plan || null,
-        })
+           qwen_plan: plan || null,
+           resize_image: analysis.resizeImage || null,
+         })
         .select()
         .single();
 
