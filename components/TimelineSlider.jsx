@@ -91,11 +91,10 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         }
       } catch (err) {
         if (cancelled) return;
-        setError(err.message || "Simulation failed");
-        setBaselineImage(image);
         const fallback = mockSimulation(baselineConcerns || {}, totalWeeks > 0 ? week : 0, totalWeeks);
         setFinalScores(fallback);
         setSimulated(fallback);
+        setBaselineImage(image);
         setReady(true);
         if (typeof onSimulationReady === "function") {
           onSimulationReady({
