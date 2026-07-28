@@ -64,18 +64,6 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [progressLoading, setProgressLoading] = useState(false);
 
   const supabase = createClient();
-  const fetchHistory = useCallback(async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from("scans")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(20);
-    if (data) setHistory(data);
-  }, [supabase, user]);
-
-  useEffect(() => { fetchHistory(); }, []);
 
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [saveError, setSaveError] = useState("");
@@ -93,6 +81,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [analyzing, setAnalyzing] = useState(false);
   const [glassesConfirmStep, setGlassesConfirmStep] = useState(0);
   const fileInputRef = useRef(null);
+
+  const fetchHistory = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("scans")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data) setHistory(data);
+  }, [supabase, user]);
+
+  useEffect(() => { fetchHistory(); }, []);
 
   useEffect(() => {
     const {
