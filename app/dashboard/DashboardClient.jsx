@@ -64,6 +64,19 @@ export default function DashboardClient({ initialUser, initialHistory }) {
   const [progressLoading, setProgressLoading] = useState(false);
 
   const supabase = createClient();
+  const fetchHistory = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("scans")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    if (data) setHistory(data);
+  }, [supabase, user]);
+
+  useEffect(() => { fetchHistory(); }, []);
+
   const [saveState, setSaveState] = useState("idle"); // idle | saving | saved | error
   const [saveError, setSaveError] = useState("");
   const [user, setUser] = useState(initialUser);
@@ -378,7 +391,8 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     try {
       const { error } = await supabase.from("scans").delete().eq("id", scanId).eq("user_id", user.id);
       if (error) throw error;
-      setHistory((prev) => prev.filter((h) => h.id !== scanId));
+       setHistory((prev) => prev.filter((h) => h.id !== scanId));
+       fetchHistory();
     } catch (err) {
       console.error("Delete failed:", err);
       alert("Could not delete this scan. Please try again.");
@@ -472,9 +486,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
 
       if (insertError) throw insertError;
 
-      setSaveState("saved");
-      setLastSavedScanId(inserted.id);
-      setHistory((prev) => [inserted, ...prev.filter((h) => h.id !== inserted.id)]);
+       setSaveState("saved");
+       setLastSavedScanId(inserted.id);
+       setHistory((prev) => [inserted, ...prev.filter((h) => h.id !== inserted.id)]);
+       fetchHistory();
     } catch (err) {
       console.error("Save failed:", err);
       const msg = err?.message || "Save failed.";
