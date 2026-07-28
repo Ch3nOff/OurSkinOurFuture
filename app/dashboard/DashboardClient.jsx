@@ -113,9 +113,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           .update({ simulation: simulationResult })
           .eq("id", lastSavedScanId)
           .eq("user_id", user.id);
-        if (!cancelled && !error) {
-          setHistory((prev) => prev.map((h) => h.id === lastSavedScanId ? { ...h, simulation: simulationResult } : h));
-        }
+         if (!cancelled && !error) {
+           setHistory((prev) => prev.map((h) => h.id === lastSavedScanId ? { ...h, simulation: simulationResult } : h));
+           fetchHistory();
+         }
       } catch {}
     })();
     return () => { cancelled = true; };
