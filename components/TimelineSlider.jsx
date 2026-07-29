@@ -141,8 +141,12 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
       if (showOriginal) {
         ctx.fillStyle = "#FDFBF6";
         ctx.fillRect(0, 0, w, h);
-        ctx.drawImage(a, 0, 0, w / 2, h);
-        ctx.drawImage(b, w / 2, 0, w / 2, h);
+        if (a.complete && a.naturalHeight > 0) {
+          ctx.drawImage(a, 0, 0, w / 2, h);
+        }
+        if (b.complete && b.naturalHeight > 0) {
+          ctx.drawImage(b, w / 2, 0, w / 2, h);
+        }
 
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.fillRect(w / 2 - 1, 0, 2, h);
@@ -152,10 +156,14 @@ export default function TimelineSlider({ image, baselineConcerns, totalWeeks = 1
         ctx.fillText("After", w / 2 + 10, 20);
       } else {
         ctx.globalAlpha = 1 - t;
-        ctx.drawImage(a, 0, 0, w, h);
+        if (a.complete && a.naturalHeight > 0) {
+          ctx.drawImage(a, 0, 0, w, h);
+        }
 
         ctx.globalAlpha = t;
-        ctx.drawImage(b, 0, 0, w, h);
+        if (b.complete && b.naturalHeight > 0) {
+          ctx.drawImage(b, 0, 0, w, h);
+        }
 
         ctx.globalAlpha = 1;
       }
