@@ -442,6 +442,29 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     setViewingHistory(true);
   }
 
+  async function persistImageToStorage(dataUrlOrUrl, label) {
+    if (!dataUrlOrUrl) return null;
+    try {
+      let blob;
+      if (dataUrlOrUrl.startsWith("data:")) {
+        blob = await (await fetch(dataUrlOrUrl)).blob();
+      } else {
+        const res = await fetch(dataUrlOrUrl);
+        if (!res.ok) return null;
+        blob = await res.blob();
+      }
+      const path = `${user.id}/${label}-${Date.now()}.jpg`;
+      const { error: uploadError } = await supabase.storage.from("scan-photos").upload(path, blob, {
+        contentType: "image/jpeg",
+      });
+      if (uploadError) return null;
+      const { data: publicUrlData } = supabase.storage.from("scan-photos").getPublicUrl(path);
+      return publicUrlData?.publicUrl ?? null;
+    } catch {
+      return null;
+    }
+  }
+
   async function handleSave() {
     if (!user) {
       window.location.href = "/auth";
@@ -467,6 +490,20 @@ export default function DashboardClient({ initialUser, initialHistory }) {
         }
       }
 
+      // Persist YouCam-generated images (resize_image, mask overlays)
+      // so they don't expire after the signed URL window.
+      const resizeImageUrl = analysis.resizeImage || null;
+      const savedResizeImage = resizeImageUrl ? await persistImageToStorage(resizeImageUrl, "resize") : null;
+
+      let masks = analysis.masks || {};
+      const maskEntries = Object.entries(masks);
+      for (const [key, maskUrl] of maskEntries) {
+        if (maskUrl && typeof maskUrl === "string" && maskUrl.startsWith("http")) {
+          const savedUrl = await persistImageToStorage(maskUrl, `mask-${key}`);
+          if (savedUrl) masks[key] = savedUrl;
+        }
+      }
+
       const { data: inserted, error: insertError } = await supabase
         .from("scans")
         .insert({
@@ -474,7 +511,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           image_url: imageUrl,
           concern_scores: analysis.concerns,
           zone_scores: analysis.zones,
-          masks: analysis.masks || {},
+          masks,
           overall_score: analysis.overall ?? null,
           skin_age: analysis.skinAge ?? null,
           skin_types: analysis.skinTypes || [],
@@ -484,7 +521,7 @@ export default function DashboardClient({ initialUser, initialHistory }) {
           routine: routine || null,
           preferences: prefs || null,
            qwen_plan: plan || null,
-           resize_image: analysis.resizeImage || null,
+           resize_image: savedResizeImage ?? analysis.resizeImage || null,
          })
         .select()
         .single();
