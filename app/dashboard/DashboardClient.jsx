@@ -93,7 +93,10 @@ export default function DashboardClient({ initialUser, initialHistory }) {
     if (data) setHistory(data);
   }, [supabase, user]);
 
-  useEffect(() => { fetchHistory(); }, []);
+  useEffect(() => {
+    fetchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const {
